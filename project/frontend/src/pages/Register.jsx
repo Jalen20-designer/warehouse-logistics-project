@@ -1,141 +1,119 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 
-// --- Standard Eye Icons (SVG) ---
-const EyeIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-);
+// ICONS
+const EyeOpen = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+const EyeClosed = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
 
-const EyeOffIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-);
+const styles = {
+  page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111827', fontFamily: 'Inter, sans-serif' },
+  card: { width: '100%', maxWidth: '400px', background: '#1f2937', padding: '2.5rem', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', color: 'white' },
+  title: { fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem', textAlign: 'center', color: '#60a5fa' },
+  subtitle: { color: '#9ca3af', textAlign: 'center', marginBottom: '2rem', fontSize: '0.9rem' },
+  label: { display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#9ca3af', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  input: { width: '100%', padding: '0.75rem', background: '#374151', border: '1px solid #4b5563', borderRadius: '8px', color: 'white', marginBottom: '1.25rem', outline: 'none' },
+  btn: { width: '100%', padding: '0.8rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', marginTop: '1rem' },
+  errorBox: { background: '#450a0a', border: '1px solid #991b1b', color: '#fca5a5', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.8rem' },
+  success: { background: '#064e3b', color: '#34d399', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', textAlign: 'center' }
+};
 
-// --- Your Existing Styles ---
-const page = { minHeight: '100vh', background: '#f3f4f6', fontFamily: 'Arial, sans-serif' }
-const header = { background: '#1f2937', color: 'white', padding: '1rem 2rem', fontWeight: '600' }
-const container = { maxWidth: '420px', margin: '3rem auto', background: 'white', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '2rem' }
-const label = { fontSize: '0.85rem', color: '#374151', fontWeight: '600' }
-const input = { width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '4px', marginTop: '0.3rem', marginBottom: '1rem', fontSize: '0.95rem' }
-const btn = { width: '100%', padding: '0.6rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '4px', fontWeight: '600', cursor: 'pointer' }
-const errorBox = { background: '#fee2e2', border: '1px solid #dc2626', color: '#7f1d1d', padding: '0.6rem', marginBottom: '1rem', fontSize: '0.85rem' }
-const successBox = { background: '#ecfdf5', border: '1px solid #16a34a', color: '#065f46', padding: '0.6rem', marginBottom: '1rem', fontSize: '0.85rem' }
-
+// --- VALIDATION LOGIC RE-ADDED ---
 function validatePassword(password) {
-  const errors = []
-  if (password.length < 8) errors.push('At least 8 characters')
-  if (!/[A-Z]/.test(password)) errors.push('At least 1 uppercase letter')
-  if (!/[0-9]/.test(password)) errors.push('At least 1 number')
-  if (!/[^A-Za-z0-9]/.test(password)) errors.push('At least 1 symbol')
-  return errors
+  const errors = [];
+  if (password.length < 8) errors.push('At least 8 characters');
+  if (!/[A-Z]/.test(password)) errors.push('At least 1 uppercase letter');
+  if (!/[0-9]/.test(password)) errors.push('At least 1 number');
+  if (!/[^A-Za-z0-9]/.test(password)) errors.push('At least 1 symbol (@, #, !, etc.)');
+  return errors;
 }
 
 export default function Register() {
-  const [form, setForm] = useState({ username: '', email: '', password: '' })
-  const [errors, setErrors] = useState([])
-  const [apiError, setApiError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false) // Toggle State
+  const [form, setForm] = useState({ username: '', email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState([]); // List ng password requirements
+  const [apiError, setApiError] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value })
-    setErrors([])
-    setApiError('')
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrors([]); // Reset errors
+    setApiError('');
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    const passwordErrors = validatePassword(form.password)
+    // 1. Check Password Requirements
+    const passwordErrors = validatePassword(form.password);
     if (passwordErrors.length > 0) {
-      setErrors(passwordErrors)
-      return
+      setErrors(passwordErrors);
+      return; // Stop here if validation fails
     }
-    setLoading(true)
+
     try {
       const res = await fetch('http://localhost/backend/register.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const data = await res.json()
-      if (data.success) { setSuccess(true) } 
-      else { setApiError(data.message || 'Registration failed.') }
-    } catch (err) {
-      setApiError('Server unavailable. Check backend connection.')
-    } finally {
-      setLoading(false)
-    }
-  }
+        body: JSON.stringify(form)
+      });
+      const data = await res.json();
+      if (data.success) setSuccess(true);
+      else setApiError(data.message);
+    } catch (err) { setApiError('Server connection failed.'); }
+  };
 
   return (
-    <div style={page}>
-      <div style={header}>Warehouse Management System</div>
-      <div style={container}>
+    <div style={styles.page}>
+      <div style={styles.card}>
+        <div style={styles.title}>Warehouse LMS</div>
+        <div style={styles.subtitle}>Create your manager account</div>
+
         {success ? (
-          <>
-            <div style={successBox}>Account successfully created.</div>
-            <Link to="/login" style={{ ...btn, display: 'block', textAlign: 'center', textDecoration: 'none' }}>Proceed to Login</Link>
-          </>
+          <div style={{ textAlign: 'center' }}>
+            <div style={styles.success}>Registration Successful!</div>
+            <Link to="/login" style={{ color: '#60a5fa', textDecoration: 'none' }}>Proceed to Login →</Link>
+          </div>
         ) : (
-          <>
-            <h2 style={{ marginBottom: '1rem' }}>Register New User</h2>
-            {apiError && <div style={errorBox}>{apiError}</div>}
+          <form onSubmit={handleSubmit}>
+            {/* API Errors */}
+            {apiError && <div style={styles.errorBox}>{apiError}</div>}
+
+            {/* PASSWORD REQUIREMENTS LIST */}
             {errors.length > 0 && (
-              <div style={errorBox}>
-                <strong>Password requirements:</strong>
-                <ul style={{ marginTop: '0.3rem', paddingLeft: '1.2rem' }}>
+              <div style={styles.errorBox}>
+                <strong>Security Requirements:</strong>
+                <ul style={{ marginTop: '5px', paddingLeft: '1.2rem' }}>
                   {errors.map((e, i) => <li key={i}>{e}</li>)}
                 </ul>
               </div>
             )}
+            
+            <label style={styles.label}>Username</label>
+            <input style={styles.input} type="text" onChange={(e) => setForm({...form, username: e.target.value})} required />
 
-            <form onSubmit={handleSubmit}>
-              <label style={label}>Username</label>
-              <input style={input} type="text" name="username" value={form.username} onChange={handleChange} required />
+            <label style={styles.label}>Email Address</label>
+            <input style={styles.input} type="email" onChange={(e) => setForm({...form, email: e.target.value})} required />
 
-              <label style={label}>Email</label>
-              <input style={input} type="email" name="email" value={form.email} onChange={handleChange} required />
-
-              <label style={label}>Password</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  style={{ ...input, paddingRight: '2.5rem' }} 
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '10px',
-                    top: '38%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#6b7280', // Grey color for icon
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                </button>
-              </div>
-
-              <button style={btn} type="submit" disabled={loading}>
-                {loading ? 'Processing...' : 'Register'}
+            <label style={styles.label}>Password</label>
+            <div style={{ position: 'relative' }}>
+              <input 
+                style={styles.input} 
+                type={showPassword ? "text" : "password"} 
+                onChange={(e) => setForm({...form, password: e.target.value})} 
+                required 
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: '12px', top: '10px', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+              >
+                {showPassword ? <EyeOpen /> : <EyeClosed />}
               </button>
-            </form>
-            <p style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#6b7280' }}>
-              Already have an account? <Link to="/login">Login</Link>
+            </div>
+
+            <button type="submit" style={styles.btn}>Register Manager</button>
+            <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: '#9ca3af' }}>
+              Already a manager? <Link to="/login" style={{ color: '#60a5fa', textDecoration: 'none' }}>Login</Link>
             </p>
-          </>
+          </form>
         )}
       </div>
     </div>
-  )
+  );
 }
