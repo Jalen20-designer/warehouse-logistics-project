@@ -1,208 +1,315 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import './Home.css';
 
-// IMPORT OF PICTURES
+// IMPORTS
 import jeanImg from '../assets/jean.jpg';
 import klarisseImg from '../assets/klarisse.jpg';
 import matthewImg from '../assets/matthew.jpg';
 
-const styles = {
-  layout: { display: 'flex', minHeight: '100vh', background: '#f3f4f6' },
-  sidebar: { width: '260px', background: '#1f2937', color: 'white', padding: '2rem 1rem', display: 'flex', flexDirection: 'column' },
-  navSection: { flexGrow: 1 },
-  main: { flex: 1, padding: '2rem', overflowY: 'auto' },
-  navLink: { display: 'block', padding: '0.8rem', color: '#d1d5db', textDecoration: 'none', borderRadius: '4px', marginBottom: '0.5rem', cursor: 'pointer', transition: '0.3s' },
-  navLinkActive: { background: '#2563eb', color: 'white' },
-  logoutBtn: { padding: '0.8rem', color: '#f87171', cursor: 'pointer', borderTop: '1px solid #374151', marginTop: 'auto' },
-  
-  cardGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' },
-  card: { background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', marginBottom: '20px' },
-  
-  table: { width: '100%', borderCollapse: 'collapse', marginTop: '10px' },
-  th: { textAlign: 'left', padding: '12px', background: '#f9fafb', borderBottom: '2px solid #e5e7eb', fontSize: '0.85rem', color: '#374151' },
-  td: { padding: '12px', borderBottom: '1px solid #e5e7eb', fontSize: '0.9rem', color: '#4b5563' },
-  badge: { padding: '4px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' },
-
-  // CENTERED ABOUT US STYLES
-  aboutGrid: { display: 'flex', justifyContent: 'center', gap: '30px', marginTop: '20px', flexWrap: 'wrap' },
-  memberCard: { background: 'white', padding: '30px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', width: '240px' },
-  avatar: { 
-    width: '120px', 
-    height: '120px', 
-    borderRadius: '50%', 
-    marginBottom: '20px', 
-    marginLeft: 'auto', 
-    marginRight: 'auto', 
-    border: '4px solid #2563eb',
-    display: 'block',
-    objectFit: 'cover' 
-  }
-};
-
 export default function Home() {
+  const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.matchMedia('(max-width: 700px)').matches ? false : true);
   const [stats, setStats] = useState({ users: 0, warehouses: 0, shipments: 0 });
-  const [usersList, setUsersList] = useState([]); 
-  const [dataList, setDataList] = useState([]);   
+  const [dataList, setDataList] = useState([]);
+  const [usersList, setUsersList] = useState([]);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
   const navigate = useNavigate();
 
   useEffect(() => {
     const loggedInUser = localStorage.getItem('user');
     if (!loggedInUser) navigate('/login');
     else {
-        setUser(JSON.parse(loggedInUser));
-        loadDashboardContent(); 
+      setUser(JSON.parse(loggedInUser));
+      loadViewData('dashboard');
     }
+    // Responsive sidebar toggle
+    const handleResize = () => {
+      if (window.matchMedia('(max-width: 700px)').matches) setIsSidebarOpen(false);
+      else setIsSidebarOpen(true);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [navigate]);
 
-  const loadDashboardContent = async () => {
-    try {
-      const resStats = await fetch('http://localhost/backend/get_dashboard_stats.php');
-      const dataStats = await resStats.json();
-      if (dataStats.success) setStats(dataStats.stats);
-
-      const resUsers = await fetch('http://localhost/backend/get_all_users.php');
-      const dataUsers = await resUsers.json();
-      if (dataUsers.success) setUsersList(dataUsers.users);
-    } catch (err) { console.error("Load error"); }
-  };
-
   const loadViewData = async (view) => {
+    setLoading(true);
     setCurrentView(view);
-    let endpoint = view === 'warehouses' ? 'get_warehouses.php' : 'get_shipments.php';
+    setSearchTerm('');
+    let endpoint = view === 'dashboard' ? 'get_dashboard_stats.php' : 
+                   view === 'warehouses' ? 'get_warehouses.php' : 'get_shipments.php';
+
+    if (view === 'about') {
+      setTimeout(() => setLoading(false), 500);
+      return;
+    }
+
     try {
       const res = await fetch(`http://localhost/backend/${endpoint}`);
       const data = await res.json();
-      if (data.success) setDataList(data.data);
-    } catch (err) { console.error("View error"); }
+      if (data.success) {
+        if (view === 'dashboard') {
+            setStats(data.stats);
+            const userRes = await fetch('http://localhost/backend/get_all_users.php');
+            const userData = await userRes.json();
+            if (userData.success) setUsersList(userData.users);
+        }
+        else setDataList(data.data || []);
+      }
+    } catch (err) { console.error("Load failed"); }
+    setTimeout(() => setLoading(false), 500);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/login');
+  // Improved filtered data for search
+  const filteredDataList = (currentView === 'warehouses' || currentView === 'shipments') && searchTerm
+    ? dataList.filter(item => {
+        const search = searchTerm.toLowerCase();
+        if (currentView === 'warehouses') {
+          return (
+            (item.id && (`00${item.id}`).includes(search.replace('#','')))
+            || (item.name && item.name.toLowerCase().includes(search))
+            || (item.location && item.location.toLowerCase().includes(search))
+            || (item.city && item.city.toLowerCase().includes(search))
+          );
+        } else if (currentView === 'shipments') {
+          return (
+            (item.id && (`00${item.id}`).includes(search.replace('#','')))
+            || (item.item_name && item.item_name.toLowerCase().includes(search))
+            || (item.status && item.status.toLowerCase().includes(search))
+          );
+        }
+        return false;
+      })
+    : dataList;
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    // No-op: filtering is live, but you can trigger fetch here if needed
   };
 
   if (!user) return null;
 
   return (
-    <div style={styles.layout}>
+    <div className="wms-main-layout">
+      {/* Sidebar backdrop for mobile */}
+      {isSidebarOpen && window.matchMedia('(max-width: 700px)').matches && (
+        <div className="wms-sidebar-backdrop" onClick={() => setIsSidebarOpen(false)}></div>
+      )}
       {/* SIDEBAR */}
-      <div style={styles.sidebar}>
-        <h2 style={{ marginBottom: '2rem', fontSize: '1.2rem', color: '#60a5fa' }}>Warehouse LMS</h2>
-        <div style={styles.navSection}>
-          <div style={{ ...styles.navLink, ...(currentView === 'dashboard' ? styles.navLinkActive : {}) }} onClick={() => { setCurrentView('dashboard'); loadDashboardContent(); }}>📊 Dashboard</div>
-          <div style={{ ...styles.navLink, ...(currentView === 'warehouses' ? styles.navLinkActive : {}) }} onClick={() => loadViewData('warehouses')}>🏢 Warehouses</div>
-          <div style={{ ...styles.navLink, ...(currentView === 'shipments' ? styles.navLinkActive : {}) }} onClick={() => loadViewData('shipments')}>🚚 Shipments</div>
-          <div style={{ ...styles.navLink, ...(currentView === 'about' ? styles.navLinkActive : {}) }} onClick={() => setCurrentView('about')}>👥 About Us</div>
+      <aside className={`wms-sidebar${isSidebarOpen ? '' : ' closed'}${window.matchMedia('(max-width: 700px)').matches && isSidebarOpen ? ' mobile-open' : ''}`}>
+        <div className="wms-sidebar-profile">
+          <div className="wms-profile-circle-initials">{user.username.charAt(0).toUpperCase()}</div>
+          <h3 className="wms-profile-name">{user.username.toUpperCase()}</h3>
+          <p className="wms-profile-role">SYSTEM MANAGER</p>
         </div>
-        <div style={styles.logoutBtn} onClick={handleLogout}>🚪 Logout System</div>
-      </div>
+        <nav className="wms-sidebar-nav">
+          <div className={`wms-nav-item ${currentView === 'dashboard' ? 'active' : ''}`} onClick={() => loadViewData('dashboard')}>📊 Dashboard</div>
+          <div className={`wms-nav-item ${currentView === 'warehouses' ? 'active' : ''}`} onClick={() => loadViewData('warehouses')}>🏢 Warehouses</div>
+          <div className={`wms-nav-item ${currentView === 'shipments' ? 'active' : ''}`} onClick={() => loadViewData('shipments')}>🚚 Shipments</div>
+          <div className={`wms-nav-item ${currentView === 'about' ? 'active' : ''}`} onClick={() => setCurrentView('about')}>👥 About Us</div>
+        </nav>
+        <button
+          className="wms-logout-box"
+          onClick={() => setShowLogoutModal(true)}
+          title="Logout"
+        >
+          <span className="wms-logout-arrow">&#8592;</span>
+        </button>
 
-      {/* MAIN CONTENT */}
-      <div style={styles.main}>
-        {currentView === 'dashboard' && (
-          <>
-            <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-              <h1>Dashboard Overview</h1>
-              <div style={{ color: '#6b7280' }}>User: <b>{user.username}</b> <span style={{...styles.badge, background:'#def7ec', color:'#03543f'}}>Manager</span></div>
-            </header>
-            <div style={styles.cardGrid}>
-                <div style={styles.card}>
-                    <div style={{ color: '#6b7280', fontSize: '0.8rem' }}>REGISTERED USERS</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.users}</div>
-                </div>
-                <div style={styles.card}>
-                    <div style={{ color: '#6b7280', fontSize: '0.8rem' }}>ACTIVE WAREHOUSES</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2563eb' }}>{stats.warehouses}</div>
-                </div>
-                <div style={styles.card}>
-                    <div style={{ color: '#6b7280', fontSize: '0.8rem' }}>TOTAL SHIPMENTS</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#059669' }}>{stats.shipments}</div>
-                </div>
-            </div>
-            <div style={styles.card}>
-              <h3 style={{ marginBottom: '10px' }}>Registered Accounts</h3>
-              <table style={styles.table}>
-                <thead>
-                  <tr><th style={styles.th}>ID</th><th style={styles.th}>Username</th><th style={styles.th}>Email Address</th><th style={styles.th}>Status</th></tr>
-                </thead>
-                <tbody>
-                  {usersList.map((u) => (
-                    <tr key={u.id}>
-                      <td style={styles.td}>#{u.id}</td><td style={styles.td}><b>{u.username}</b></td><td style={styles.td}>{u.email}</td><td style={styles.td}><span style={{...styles.badge, background:'#def7ec', color:'#03543f'}}>Active</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-
-        {currentView === 'warehouses' && (
-          <div style={styles.card}>
-            <h2>Warehouse Registry</h2>
-            <table style={styles.table}>
-              <thead><tr><th style={styles.th}>ID</th><th style={styles.th}>Warehouse Name</th><th style={styles.th}>Location</th></tr></thead>
-              <tbody>
-                {dataList.map(w => (
-                  <tr key={w.id}><td style={styles.td}>#{w.id}</td><td style={styles.td}><b>{w.name}</b></td><td style={styles.td}>{w.location}</td></tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {currentView === 'shipments' && (
-          <div style={styles.card}>
-            <h2>Shipment Tracking</h2>
-            <table style={styles.table}>
-              <thead><tr><th style={styles.th}>ID</th><th style={styles.th}>Item Name</th><th style={styles.th}>Destination</th><th style={styles.th}>Status</th></tr></thead>
-              <tbody>
-                {dataList.map(s => (
-                  <tr key={s.id}>
-                    <td style={styles.td}>#{s.id}</td><td style={styles.td}><b>{s.item_name}</b></td><td style={styles.td}>{s.warehouse_name}</td>
-                    <td style={styles.td}><span style={{ ...styles.badge, background: s.status === 'Delivered' ? '#def7ec' : '#fef3c7', color: s.status === 'Delivered' ? '#03543f' : '#92400e' }}>{s.status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* 2. ABOUT US VIEW WITH IMAGES */}
-        {currentView === 'about' && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
-            <div style={{ textAlign: 'center' }}>
-              <h1 style={{ fontSize: '2.5rem', marginBottom: '10px' }}>Our Development Team</h1>
-              <p style={{ color: '#6b7280', fontSize: '1.1rem', marginBottom: '50px' }}>The creative minds behind the Warehouse Logistics Management System.</p>
-              <div style={styles.aboutGrid}>
-                {/* JEAN */}
-                <div style={styles.memberCard}>
-                  <img src={jeanImg} alt="Jean" style={styles.avatar} />
-                  <h4 style={{ margin: '10px 0 5px 0' }}>Jean Lanierod Carlos</h4>
-                  <p style={{ fontSize: '0.85rem', color: '#2563eb', fontWeight: 'bold' }}>Project Lead</p>
-                  <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Full-Stack Developer</p>
-                </div>
-                {/* KLARISSE */}
-                <div style={styles.memberCard}>
-                  <img src={klarisseImg} alt="Klarisse" style={styles.avatar} />
-                  <h4 style={{ margin: '10px 0 5px 0' }}>Klarisse Anne Borlado</h4>
-                  <p style={{ fontSize: '0.85rem', color: '#2563eb', fontWeight: 'bold' }}>UI/UX Designer</p>
-                  <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Frontend Specialist</p>
-                </div>
-                {/* MATTHEW */}
-                <div style={styles.memberCard}>
-                  <img src={matthewImg} alt="Matthew" style={styles.avatar} />
-                  <h4 style={{ margin: '10px 0 5px 0' }}>Matthew Francia</h4>
-                  <p style={{ fontSize: '0.85rem', color: '#2563eb', fontWeight: 'bold' }}>Database Admin</p>
-                  <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Backend Support</p>
-                </div>
+        {/* Custom Logout Modal */}
+        {showLogoutModal && (
+          <div className="wms-logout-modal-overlay" onClick={() => setShowLogoutModal(false)}>
+            <div className="wms-logout-modal" onClick={e => e.stopPropagation()}>
+              <div className="wms-logout-modal-header">Log Out</div>
+              <div className="wms-logout-modal-body">Are you sure you want to log out?</div>
+              <div className="wms-logout-modal-actions">
+                <button className="wms-logout-modal-btn wms-logout-ok" onClick={() => { localStorage.clear(); navigate('/login'); }}>OK</button>
+                <button className="wms-logout-modal-btn wms-logout-cancel" onClick={() => setShowLogoutModal(false)}>Cancel</button>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className="wms-main-content" style={{position:'relative'}}>
+        {loading && (
+          <div className="wms-loading-overlay wms-loading-overlay-maincontent">
+            <div className="wms-loading-spinner"></div>
+            <div className="wms-loading-text">Loading...</div>
+          </div>
+        )}
+        <header className="wms-top-header">
+          <button className="wms-hamburger" onClick={() => setIsSidebarOpen(v => !v)}>☰</button>
+          <div className="wms-header-date">📅 {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+        </header>
+
+        <div className="wms-content-padding">
+          {/* FIXED VIEW HEADER - Profile badge pinned to right */}
+          <div className="wms-view-header">
+            <h1 className="wms-view-title">{currentView.toUpperCase()} OVERVIEW</h1>
+            <div style={{ flex: 1 }}></div> {/* ITO YUNG MAGTUTULAK SA BADGE SA DULO */}
+            
+            {currentView === 'dashboard' && (
+                <div className="wms-user-badge" onClick={() => setIsProfileModalOpen(true)}>
+                    <div className="wms-badge-icon">{user.username.charAt(0).toUpperCase()}</div>
+                    <div className="wms-badge-text">
+                        <span className="wms-badge-name">{user.username}</span>
+                        <span className="wms-badge-role">MANAGER ▼</span>
+                    </div>
+                </div>
+            )}
+          </div>
+
+
+
+          {/* ADMIN NODE MODAL */}
+          {isProfileModalOpen && (
+              <div className="wms-modal-overlay" onClick={() => setIsProfileModalOpen(false)}>
+                  <div className="wms-modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: '0', overflow: 'hidden', maxWidth: '500px' }}>
+                      <div style={{ background: '#f8fafc', padding: '30px', textAlign: 'center', borderBottom: '1px solid #eee' }}>
+                          <div style={{ fontSize: '3.5rem' }}>🛡️</div>
+                          <h3 style={{ marginTop: '10px', fontSize: '0.8rem', color: '#2563eb', fontWeight: '900', letterSpacing: '2px' }}>ADMIN NODE</h3>
+                      </div>
+                      <div style={{ padding: '30px' }}>
+                          <div className="wms-modal-table-wrapper">
+                              <table className="wms-modal-table">
+                                  <thead>
+                                      <tr><th>MANAGER</th><th style={{ textAlign: 'right' }}>STATUS</th></tr>
+                                  </thead>
+                                  <tbody>
+                                      {usersList.map((u) => (
+                                          <tr key={u.id}>
+                                              <td><b>{u.username}</b></td>
+                                              <td style={{ textAlign: 'right' }}><span className="wms-status-badge">AUTHORIZED</span></td>
+                                          </tr>
+                                      ))}
+                                  </tbody>
+                              </table>
+                          </div>
+                      </div>
+                      <button className="wms-close-btn" onClick={() => setIsProfileModalOpen(false)}>CLOSE OVERVIEW</button>
+                  </div>
+              </div>
+          )}
+
+          {/* DETAIL MODAL */}
+          {isDetailModalOpen && selectedItem && (
+            <div className="wms-modal-overlay" onClick={() => setIsDetailModalOpen(false)}>
+                <div className="wms-modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: '0', overflow: 'hidden', maxWidth: '450px' }}>
+                    <div style={{ background: '#111827', padding: '40px', textAlign: 'center' }}>
+                      <img src={currentView === 'warehouses' ? "https://cdn-icons-png.flaticon.com/512/2271/2271068.png" : "https://cdn-icons-png.flaticon.com/512/1554/1554561.png"} alt="Icon" style={{ height: '100px', filter: 'brightness(0) invert(1)' }}/>
+                    </div>
+                    <div style={{ padding: '30px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '800' }}>RECORD #00{selectedItem.id}</span>
+                      <h2 style={{ margin: '10px 0' }}>{selectedItem.name || selectedItem.item_name}</h2>
+                      {currentView === 'warehouses' ? (
+                        <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Location: {selectedItem.location}</p>
+                      ) : (
+                        <>
+                          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Status: {selectedItem.status}</p>
+                          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Warehouse: {selectedItem.warehouse_name}</p>
+                          {/* Optionally show quantity if available */}
+                          {selectedItem.quantity !== undefined && (
+                            <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Stock: {selectedItem.quantity}</p>
+                          )}
+                        </>
+                      )}
+                      <button onClick={() => setIsDetailModalOpen(false)} style={{ width: '100%', marginTop: '25px', padding: '15px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>ACKNOWLEDGE</button>
+                    </div>
+                </div>
+            </div>
+          )}
+
+
+          {/* SEARCH BAR for Warehouses/Shipments */}
+          {(currentView === 'warehouses' || currentView === 'shipments') && (
+            <form className="wms-search-container" onSubmit={handleSearch} style={{marginBottom:'30px'}}>
+              <input
+                className="wms-search-input"
+                type="text"
+                placeholder={`Search by #, name${currentView==='shipments' ? ', or status' : ''}`}
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+              <button className="wms-search-btn" type="submit" aria-label="Search">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="9" cy="9" r="7" stroke="#6b7280" strokeWidth="2"/>
+                  <line x1="14.4142" y1="14" x2="18" y2="17.5858" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </form>
+          )}
+
+          <div className="wms-card-grid wms-dashboard-cards">
+            {/* CARDS */}
+            {currentView === 'dashboard' && (
+              <>
+                <div className="wms-card"><div className="wms-card-top accent"><span className="wms-label">USERS</span><h2 className="wms-value">{stats.users} Managers</h2></div><div className="wms-card-bottom">Active Access</div></div>
+                <div className="wms-card"><div className="wms-card-top"><span className="wms-label">LOGISTICS</span><h2 className="wms-value">{stats.warehouses} Warehouses</h2></div><div className="wms-card-bottom">Authorized Hubs</div></div>
+                <div className="wms-card"><div className="wms-card-top"><span className="wms-label">OPERATIONS</span><h2 className="wms-value">{stats.shipments} Shipments</h2></div><div className="wms-card-bottom">Live Tracking</div></div>
+              </>
+            )}
+
+            {(currentView === 'warehouses' || currentView === 'shipments') && filteredDataList.map((item, index) => (
+              <div key={index} className="wms-card">
+                <div className="wms-card-top">
+                  <div><span className="wms-label">#00{item.id}</span><h2 className="wms-item-name">{item.name || item.item_name}</h2><p className="wms-item-sub">{item.location || item.status}</p></div>
+                  <div className="wms-card-logo-circle">{item.name ? '🏢' : '🚚'}</div>
+                </div>
+                <div className="wms-card-bottom">
+                   <span>{item.warehouse_name || 'System Verified'}</span>
+                   <button className="wms-details-btn" onClick={() => {setSelectedItem(item); setIsDetailModalOpen(true);}}>Details ❯</button>
+                </div>
+              </div>
+            ))}
+
+            {/* ABOUT US */}
+            {currentView === 'about' && (
+                <div className="wms-about-container">
+                    {[
+                        {
+                          name: 'Jean Carlos',
+                          role: 'Project Lead',
+                          img: jeanImg,
+                          desc: 'Jean is the main architect and project lead, ensuring the system is robust and scalable.'
+                        },
+                        {
+                          name: 'Klarisse Borlado',
+                          role: 'UI Designer',
+                          img: klarisseImg,
+                          desc: 'Klarisse crafts the user experience and visual design for a modern, intuitive interface.'
+                        },
+                        {
+                          name: 'Matthew Francia',
+                          role: 'Database Admin',
+                          img: matthewImg,
+                          desc: 'Matthew manages the database, making sure all data is secure and optimized.'
+                        }
+                    ].map(m => (
+                        <div className="wms-card wms-member-card" key={m.name}>
+                            <div className="wms-card-top accent center-content">
+                              <img src={m.img} className="wms-member-img" alt={m.name} />
+                            </div>
+                            <div className="wms-card-bottom center-content">
+                              <h4 style={{margin:0}}>{m.name}</h4>
+                              <p style={{fontSize:'0.7rem', color: '#6b7280', marginTop:'5px'}}>{m.role}</p>
+                            </div>
+                            <div className="wms-member-desc">{m.desc}</div>
+                        </div>
+                    ))}
+                </div>
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

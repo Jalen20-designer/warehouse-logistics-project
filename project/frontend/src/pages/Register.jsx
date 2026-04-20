@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './Register.css';
 import { Link } from 'react-router-dom';
 
 // ICONS
@@ -70,7 +71,7 @@ export default function Register() {
             <Link to="/login" style={{ color: '#60a5fa', textDecoration: 'none' }}>Proceed to Login →</Link>
           </div>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} autoComplete="off" spellCheck={false}>
             {/* API Errors */}
             {apiError && <div style={styles.errorBox}>{apiError}</div>}
 
@@ -85,16 +86,18 @@ export default function Register() {
             )}
             
             <label style={styles.label}>Username</label>
-            <input style={styles.input} type="text" onChange={(e) => setForm({...form, username: e.target.value})} required />
+            <input style={styles.input} type="text" autoComplete="new-username" name="register-username" onChange={(e) => setForm({...form, username: e.target.value})} required />
 
             <label style={styles.label}>Email Address</label>
-            <input style={styles.input} type="email" onChange={(e) => setForm({...form, email: e.target.value})} required />
+            <input style={styles.input} type="email" autoComplete="new-email" name="register-email" onChange={(e) => setForm({...form, email: e.target.value})} required />
 
             <label style={styles.label}>Password</label>
             <div style={{ position: 'relative' }}>
               <input 
                 style={styles.input} 
                 type={showPassword ? "text" : "password"} 
+                autoComplete="new-password" 
+                name="register-password"
                 onChange={(e) => setForm({...form, password: e.target.value})} 
                 required 
               />
