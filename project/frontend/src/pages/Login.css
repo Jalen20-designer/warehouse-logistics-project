@@ -1,3 +1,57 @@
+/* Floating Glassmorphism Blobs */
+.login-container {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.login-container::before,
+.login-container::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle at 30% 30%, #2563eb 0%, #7c3aed 100%);
+  opacity: 0.15;
+  filter: blur(100px);
+  z-index: 0;
+  animation: float 30s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+.login-container::before {
+  top: -200px;
+  left: -200px;
+  animation-delay: 0s;
+}
+.login-container::after {
+  bottom: -200px;
+  right: -200px;
+  background: radial-gradient(circle at 70% 70%, #7c3aed 0%, #2563eb 100%);
+  animation-delay: 10s;
+}
+@keyframes float {
+  0%   { transform: translateY(0) scale(1); }
+  50%  { transform: translateY(40px) scale(1.08); }
+  100% { transform: translateY(-30px) scale(0.98); }
+}
+
+/* Glassmorphism Login Box */
+.login-box {
+  position: relative;
+  z-index: 2;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 2.5rem 2rem;
+}
+.login-box * {
+  position: relative;
+  z-index: 3;
+}
 /* Remove yellow autofill background for Chrome/Edge on login */
 input:-webkit-autofill,
 input:-webkit-autofill:focus,

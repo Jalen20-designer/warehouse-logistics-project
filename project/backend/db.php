@@ -5,12 +5,10 @@ $username = "root";
 $password = "";
 
 try {
-    // Make sure this says $pdo = ...
+    // This will create a new PDO instance and connect to the database
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch(PDOException $e) {
-    // If it fails, stop and show why
-    header('Content-Type: application/json');
-    die(json_encode(["success" => false, "message" => "Connection failed: " . $e->getMessage()]));
+    die("Connection failed: " . $e->getMessage());
 }
 ?>
