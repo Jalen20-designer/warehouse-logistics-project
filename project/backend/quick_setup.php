@@ -15,8 +15,15 @@ try {
     $warehouseId = $pdo->lastInsertId();
 
     // 2. I-save ang Driver
-    $stmtD = $pdo->prepare("INSERT INTO drivers (name, status) VALUES (?, ?)");
-    $stmtD->execute([$data['driver_name'], 'On Delivery']);
+    $stmtD = $pdo->prepare("INSERT INTO drivers (name, status, license_number, vehicle_type, contact_no, license_expiry) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmtD->execute([
+        $data['driver_name'], 
+        'On Delivery',
+        $data['licenseNo'],
+        $data['vehicleType'],
+        $data['contactNo'],
+        $data['licenseExpiry']
+    ]);
     $driverId = $pdo->lastInsertId();
 
     // 3. I-save ang Shipment (gamit ang IDs ng dalawa sa itaas)
