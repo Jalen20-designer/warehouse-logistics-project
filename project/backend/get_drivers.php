@@ -2,6 +2,6 @@
 header('Access-Control-Allow-Origin: http://localhost:3000');
 header('Content-Type: application/json');
 require_once 'db.php';
-$stmt = $pdo->query("SELECT id, name, license_number, status, vehicle_type, contact_no, license_expiry FROM drivers");
+$stmt = $pdo->query("SELECT id, name, license_number, status, vehicle_type, contact_no, license_expiry, warehouse_id FROM drivers ORDER BY id ASC");
 echo json_encode(["success" => true, "data" => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
 ?>

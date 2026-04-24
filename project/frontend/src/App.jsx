@@ -4,6 +4,7 @@ import Register from './pages/Register'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import ProtectedRoute from './components/ProtectedRoute'
+import { ThemeProvider } from './context/ThemeContext'
 
 const globalStyle = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,7 +19,7 @@ const globalStyle = `
 
 export default function App() {
   return (
-    <>
+    <ThemeProvider>
       <style>{globalStyle}</style>
 
       <BrowserRouter>
@@ -38,6 +39,6 @@ export default function App() {
           />
         </Routes>
       </BrowserRouter>
-    </>
+    </ThemeProvider>
   )
 }

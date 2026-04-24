@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { MdDashboard, MdWarehouse, MdLocalShipping, MdGroup, MdCalendarToday, MdLogout, MdLocationCity, MdLocalShipping as MdTruck, MdPerson, MdSecurity, MdPhone, MdCreditCard } from 'react-icons/md';
+import { MdDashboard, MdWarehouse, MdLocalShipping, MdGroup, MdCalendarToday, MdLogout, MdLocationCity, MdLocalShipping as MdTruck, MdPerson, MdSecurity, MdPhone, MdCreditCard, MdLightMode, MdDarkMode } from 'react-icons/md';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import './Home.css';
 
 // IMPORTS
@@ -9,6 +10,7 @@ import klarisseImg from '../assets/klarisse.jpg';
 import matthewImg from '../assets/matthew.jpg';
 
 export default function Home() {
+  const { isDark, toggleTheme } = useTheme();
   // 1. ALL STATE DEFINITIONS MUST BE INSIDE THE COMPONENT
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
@@ -36,6 +38,7 @@ export default function Home() {
     contactNo: '',
     licenseExpiry: '',
     shipment_item: '',
+    shipment_quantity: '',
     shipment_status: 'In Transit',
   });
   const shipmentStatusOptions = ['In Transit', 'Delivered', 'Pending'];
@@ -49,23 +52,44 @@ export default function Home() {
   };
 
   const handleQuickSave = async () => {
+    const { warehouse_name, warehouse_location, driver_name, licenseNo, vehicleType, contactNo, licenseExpiry, shipment_item, shipment_quantity, shipment_status } = quickSetup;
+    
+    if (!warehouse_name || !warehouse_location || !driver_name || !licenseNo || !vehicleType || !contactNo || !licenseExpiry || !shipment_item || !shipment_quantity || !shipment_status) {
+      showNotif('Please fill in all required fields before activating setup.', 'error');
+      return;
+    }
+
     try {
-      const res = await fetch('http://localhost/backend/quick_setup.php', {
+      const payload = {
+        warehouse_name,
+        warehouse_location,
+        driver_name,
+        licenseNo,
+        vehicleType,
+        contactNo,
+        licenseExpiry,
+        shipment_item,
+        shipment_quantity: parseInt(shipment_quantity, 10),
+        shipment_status
+      };
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/quick_setup.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(quickSetup),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
         setIsQuickSetupOpen(false);
-        setQuickSetup({ warehouse_name: '', warehouse_location: '', driver_name: '', licenseNo: '', vehicleType: '', contactNo: '', licenseExpiry: '', shipment_item: '', shipment_status: 'In Transit' });
+        showNotif('Quick Setup successful!', 'success');
+        setQuickSetup({ warehouse_name: '', warehouse_location: '', driver_name: '', licenseNo: '', vehicleType: '', contactNo: '', licenseExpiry: '', shipment_item: '', shipment_quantity: '', shipment_status: 'In Transit' });
         loadViewData(currentView); // refresh current view
         loadViewData('dashboard'); // refresh stats
       } else {
-        alert(data.message || 'Quick setup failed.');
+        showNotif(data.message || 'Quick setup failed.', 'error');
       }
     } catch (err) {
-      alert('Quick setup failed.');
+      showNotif('Quick setup failed.', 'error');
     }
   };
 
@@ -102,12 +126,12 @@ export default function Home() {
 
     try {
       // Added timestamp to prevent browser from caching the old list
-      const res = await fetch(`http://localhost/backend/${endpoint}?t=${new Date().getTime()}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}?t=${new Date().getTime()}`);
       const data = await res.json();
       if (data.success) {
         if (view === 'dashboard') {
             setStats(data.stats);
-            const userRes = await fetch(`http://localhost/backend/get_all_users.php?t=${new Date().getTime()}`);
+            const userRes = await fetch(`${import.meta.env.VITE_API_URL}/get_all_users.php?t=${new Date().getTime()}`);
             const userData = await userRes.json();
             if (userData.success) setUsersList(userData.users);
         }
@@ -162,7 +186,7 @@ export default function Home() {
     if (!selectedItem || !selectedItem.id) return;
 
     try {
-      const res = await fetch('http://localhost/backend/delete_record.php', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/delete_record.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: selectedItem.id, table: currentView })
@@ -258,8 +282,30 @@ export default function Home() {
         <header className="wms-top-header" style={{display:'flex',alignItems:'center',gap:16}}>
           <button className="wms-hamburger" onClick={() => setIsSidebarOpen(v => !v)}>☰</button>
           <div className="wms-header-date"><MdCalendarToday className="wms-nav-icon" style={{marginRight:8}} />{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+          <button 
+            onClick={toggleTheme}
+            style={{
+              background: isDark ? '#eab308' : '#2563eb',
+              color: isDark ? '#1a1a1a' : '#fff',
+              border: 'none',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              fontSize: '1.2rem',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              transition: 'all 0.3s',
+              marginLeft: 'auto',
+              marginRight: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {isDark ? <MdLightMode style={{ fontSize: '1.3rem' }} /> : <MdDarkMode style={{ fontSize: '1.3rem' }} />}
+          </button>
           <button
-            style={{marginLeft:'auto',background:'#2563eb',color:'#fff',border:'none',borderRadius:8,padding:'10px 18px',fontWeight:'bold',fontSize:'1em',cursor:'pointer',boxShadow:'0 2px 8px #0001'}} 
+            style={{background: isDark ? '#eab308' : '#2563eb',color: isDark ? '#1a1a1a' : '#fff',border:'none',borderRadius:8,padding:'10px 18px',fontWeight:'bold',fontSize:'1em',cursor:'pointer',boxShadow:'0 2px 8px #0001'}} 
             onClick={()=>setIsQuickSetupOpen(true)}
           >+ Quick Setup</button>
         </header>
@@ -267,7 +313,7 @@ export default function Home() {
         {/* QUICK SETUP MODAL */}
         {isQuickSetupOpen && (
           <div className="wms-modal-overlay" onClick={()=>setIsQuickSetupOpen(false)}>
-            <div className="setup-modal-content wms-modal-content" onClick={e=>e.stopPropagation()} style={{maxWidth:600,minWidth:400,background:'#fff',color:'#181f2a',padding:0,maxHeight:'90vh',overflowY:'auto'}}>
+            <div className="setup-modal-content wms-modal-content" onClick={e=>e.stopPropagation()} style={{maxWidth:600,minWidth:400,background:'#2a2a2a',color:'#fff',padding:0,maxHeight:'90vh',overflowY:'auto'}}>
               <div className="setup-modal-header" style={{background:'#111827',padding:'24px 32px',borderBottom:'1px solid #eee'}}>
                 <h2 style={{margin:0,fontSize:'1.5em',fontWeight:800,letterSpacing:1,color:'#fff'}}>Quick Setup</h2>
                 <p style={{margin:'8px 0 0 0',color:'#9ca3af',fontSize:'0.9em'}}>Fill out this form to setup your nodes.</p>
@@ -313,6 +359,10 @@ export default function Home() {
                    <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Shipment Item <span style={{color:'red'}}>*</span></label>
                    <input className="wms-search-input" name="shipment_item" value={quickSetup.shipment_item} onChange={handleQuickInput} placeholder="Item Name" style={{width:'100%',marginBottom:'10px'}} />
                 </div>
+                <div className="form-group" style={{marginBottom:'15px'}}>
+                   <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Quantity <span style={{color:'red'}}>*</span></label>
+                   <input className="wms-search-input" type="number" name="shipment_quantity" value={quickSetup.shipment_quantity} onChange={handleQuickInput} placeholder="Quantity" style={{width:'100%',marginBottom:'10px'}} />
+                </div>
                 <div className="form-group" style={{marginBottom:'25px'}}>
                    <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Shipment Status <span style={{color:'red'}}>*</span></label>
                    <select className="wms-search-input" name="shipment_status" value={quickSetup.shipment_status} onChange={handleQuickInput} style={{width:'100%',marginBottom:'10px'}}>
@@ -334,7 +384,7 @@ export default function Home() {
 
           {isProfileModalOpen && (
               <div className="wms-modal-overlay" onClick={() => setIsProfileModalOpen(false)}>
-                  <div className="wms-modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: '0', overflow: 'hidden', maxWidth: '500px' }}>
+                  <div className="wms-modal-content wide-modal" onClick={(e) => e.stopPropagation()} style={{ padding: '0', overflow: 'hidden' }}>
                       <div style={{ background: '#f8fafc', padding: '30px', textAlign: 'center', borderBottom: '1px solid #eee', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                           <MdSecurity style={{ fontSize: '4.5rem', color: '#3b82f6' }} />
                           <h3 style={{ marginTop: '10px', fontSize: '0.8rem', color: '#2563eb', fontWeight: '900', letterSpacing: '2px' }}>ADMIN NODE</h3>
@@ -363,7 +413,7 @@ export default function Home() {
 
           {isDetailModalOpen && selectedItem && (
             <div className="wms-modal-overlay" onClick={() => setIsDetailModalOpen(false)}>
-                <div className="wms-modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: '0', overflow: 'hidden', maxWidth: '450px' }}>
+                <div className="wms-modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: '0', overflow: 'hidden' }}>
                     <div style={{ background: '#111827', padding: '40px', textAlign: 'center' }}>
                       {currentView === 'warehouses' ? (
                         <MdLocationCity style={{ fontSize: '80px', color: '#fff' }} />
@@ -374,7 +424,7 @@ export default function Home() {
                       )}
                     </div>
                     <div style={{ padding: '30px', textAlign: 'center' }}>
-                      <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '800' }}>RECORD #00{selectedItem.id}</span>
+                      <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '800' }}>RECORD #00{(currentView === 'warehouses' ? selectedItem.id : (selectedItem.warehouse_id || selectedItem.id)).toString().padStart(2, '0')}</span>
                       <h2 style={{ margin: '10px 0' }}>{currentView === 'shipments' ? selectedItem.item_name : selectedItem.name}</h2>
                       {currentView === 'warehouses' ? (
                         <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Location: {selectedItem.location}</p>
@@ -394,13 +444,20 @@ export default function Home() {
                       ) : (
                         <>
                           <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Status: {selectedItem.status}</p>
+                          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Quantity: {selectedItem.quantity || 'N/A'}</p>
                           <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Warehouse: {selectedItem.warehouse_name}</p>
                           <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Driver: {selectedItem.driver_name ? selectedItem.driver_name : 'Unassigned'}</p>
                         </>
                       )}
                       <div style={{ display: 'flex', gap: '10px', marginTop: '25px' }}>
-                        <button onClick={() => setIsDetailModalOpen(false)} style={{ flex: 1, padding: '15px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>CANCEL</button>
-                        <button onClick={handleDeleteClick} style={{ flex: 1, padding: '15px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>DELETE RECORD</button>
+                        {currentView === 'warehouses' ? (
+                          <>
+                            <button onClick={() => setIsDetailModalOpen(false)} style={{ flex: 1, padding: '15px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>CANCEL</button>
+                            <button onClick={handleDeleteClick} style={{ flex: 1, padding: '15px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>DELETE RECORD</button>
+                          </>
+                        ) : (
+                          <button onClick={() => setIsDetailModalOpen(false)} style={{ width: '100%', padding: '15px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>CLOSE</button>
+                        )}
                       </div>
                     </div>
                 </div>
@@ -409,7 +466,7 @@ export default function Home() {
 
           {isConfirmOpen && selectedItem && (
             <div className="wms-modal-overlay" onClick={() => setIsConfirmOpen(false)} style={{zIndex: 10000}}>
-              <div className="wms-modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: '30px', maxWidth: '400px', textAlign: 'center' }}>
+              <div className="wms-modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: '30px', textAlign: 'center' }}>
                 <div style={{ fontSize: '4rem', marginBottom: '10px' }}>⚠️</div>
                 <h2 style={{ margin: '0 0 15px 0' }}>Are you sure?</h2>
                 <p style={{ color: '#6b7280', marginBottom: '25px' }}>
@@ -458,7 +515,7 @@ export default function Home() {
                   <div key={index} className="wms-card">
                     <div className="wms-card-top" style={{ paddingBottom: '12px' }}>
                       <div>
-                        <span className="wms-label">#00{item.id}</span>
+                        <span className="wms-label">#00{(item.warehouse_id || item.id).toString().padStart(2, '0')}</span>
                         <h2 className="wms-item-name" style={{ marginBottom: '4px' }}>{item.name}</h2>
                         <p style={{ margin: 0, fontSize: '0.85rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <MdTruck style={{ fontSize: '1.2em' }} /> 
@@ -466,7 +523,7 @@ export default function Home() {
                         </p>
                       </div>
                       <div className="wms-card-logo-circle">
-                        <MdPerson style={{ fontSize: '1.7em', color: '#2563eb' }} />
+                        <MdPerson style={{ fontSize: '1.7em', color: isDark ? '#eab308' : '#2563eb' }} />
                       </div>
                     </div>
                     <div style={{ padding: '12px 20px 15px 20px', fontSize: '0.8rem', color: '#4b5563', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -503,7 +560,7 @@ export default function Home() {
                         <p className="wms-item-sub">{item.location}</p>
                       </div>
                       <div className="wms-card-logo-circle">
-                        <MdLocationCity style={{ fontSize: '1.7em', color: '#2563eb' }} />
+                        <MdLocationCity style={{ fontSize: '1.7em', color: isDark ? '#eab308' : '#2563eb' }} />
                       </div>
                     </div>
                     <div className="wms-card-bottom">
@@ -523,11 +580,12 @@ export default function Home() {
                   <div key={index} className="wms-card">
                     <div className="wms-card-top">
                       <div>
-                        <span className="wms-label">#00{item.id}</span>
+                        <span className="wms-label">#00{(item.warehouse_id || item.id).toString().padStart(2, '0')}</span>
                         <h2 className="wms-item-name">{item.item_name}</h2>
+                        <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#6b7280' }}>Qty: {item.quantity || 'N/A'}</p>
                       </div>
                       <div className="wms-card-logo-circle">
-                        <MdTruck style={{ fontSize: '1.7em', color: '#2563eb' }} />
+                        <MdTruck style={{ fontSize: '1.7em', color: isDark ? '#eab308' : '#2563eb' }} />
                       </div>
                     </div>
                     <div className="wms-card-bottom">
@@ -543,9 +601,9 @@ export default function Home() {
             {currentView === 'about' && (
                 <div className="wms-about-container">
                     {[
-                        { name: 'Jean Carlos', role: 'Project Lead', img: jeanImg, desc: 'Jean is the main architect and project lead.' },
-                        { name: 'Klarisse Borlado', role: 'UI Designer', img: klarisseImg, desc: 'Klarisse crafts the user experience.' },
-                        { name: 'Matthew Francia', role: 'Database Admin', img: matthewImg, desc: 'Matthew manages the database.' }
+                        { name: 'Jean Carlos', role: 'Project Lead', img: jeanImg, desc: 'The Project Lead is responsible for overseeing the planning, coordination, and execution of the project, ensuring that team members stay aligned with objectives.' },
+                        { name: 'Klarisse Borlado', role: 'Database Administrator', img: klarisseImg, desc: 'The Database Manager is responsible for designing, organizing, and maintaining the database, ensuring data is stored securely, efficiently, and is easily accessible.' },
+                        { name: 'Matthew Francia', role: 'UI/UX Designer', img: matthewImg, desc: 'The UI/UX Designer is responsible for designing user-friendly and visually appealing interfaces, ensuring a smooth and intuitive user experience..' }
                     ].map(m => (
                         <div className="wms-card wms-member-card" key={m.name}>
                             <div className="wms-card-top accent center-content">
