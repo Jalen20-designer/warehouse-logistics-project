@@ -4,47 +4,27 @@ import { useTheme } from '../context/ThemeContext';
 import './Landing.css';
 
 export default function Landing() {
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark } = useTheme();
 
   return (
-    <div className="landing-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif', background: isDark ? '#1a1a1a' : '#f3f4f6' }}>
-      <button 
-        onClick={toggleTheme}
-        style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          background: isDark ? '#eab308' : '#2563eb',
-          color: isDark ? '#1a1a1a' : '#fff',
-          border: 'none',
-          borderRadius: '50%',
-          width: '50px',
-          height: '50px',
-          fontSize: '1.5rem',
-          cursor: 'pointer',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-          transition: 'all 0.3s',
-          zIndex: 1000
-        }}
-      >
-        {isDark ? '☀️' : '🌙'}
-      </button>
-      <div className="landing-card" style={{ width: '100%', maxWidth: '500px', textAlign: 'center', background: isDark ? '#2a2a2a' : '#fff', padding: '3rem 2rem', borderRadius: '12px', boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 32px rgba(0,0,0,0.1)' }}>
-        <div style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: isDark ? '#eab308' : '#2563eb' }}>Warehouse Logistics LMS</div>
-        <div style={{ color: isDark ? '#d1d5db' : '#6b7280', marginBottom: '2.5rem', lineHeight: '1.6', fontSize: '1rem' }}>
+    <div className="landing-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Roboto Condensed, sans-serif', background: '#121417' }}>
+      <div className="landing-card" style={{ width: '100%', maxWidth: '500px', textAlign: 'center', background: '#1E2126', padding: '3rem 2rem', borderRadius: '4px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', border: '2px solid #343A40', position: 'relative' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'repeating-linear-gradient(45deg, #000, #000 8px, #FFB800 8px, #FFB800 16px)' }}></div>
+        <div style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#F37021', fontFamily: 'Bebas Neue, sans-serif', letterSpacing: '3px' }}>WAREHOUSE LOGISTICS LMS</div>
+        <div style={{ color: '#9ca3af', marginBottom: '2.5rem', lineHeight: '1.6', fontSize: '1rem' }}>
           A secure and professional platform for managing warehouse inventory, 
           tracking shipments, and monitoring staff activity in real-time.
         </div>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-          <Link to="/register" style={{ padding: '0.8rem 2rem', background: isDark ? '#eab308' : '#2563eb', color: isDark ? '#1a1a1a' : '#fff', textDecoration: 'none', borderRadius: '10px', fontWeight: 600, transition: '0.3s' }}>
+          <Link to="/register" style={{ padding: '0.9rem 2rem', background: '#F37021', color: '#fff', textDecoration: 'none', borderRadius: '4px', fontWeight: 700, transition: '0.3s', boxShadow: '0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)', textTransform: 'uppercase', letterSpacing: '1px' }}>
             Get Started
           </Link>
-          <Link to="/login" style={{ padding: '0.8rem 2rem', background: 'transparent', color: isDark ? '#eab308' : '#2563eb', textDecoration: 'none', borderRadius: '10px', border: isDark ? '1px solid #eab308' : '1px solid #2563eb', fontWeight: 600, transition: '0.3s' }}>
+          <Link to="/login" style={{ padding: '0.9rem 2rem', background: 'transparent', color: '#F37021', textDecoration: 'none', borderRadius: '4px', border: '2px solid #F37021', fontWeight: 700, transition: '0.3s', textTransform: 'uppercase', letterSpacing: '1px' }}>
             Sign In
           </Link>
         </div>
-        <p style={{ marginTop: '2rem', fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#4b5563' }}>
-            System Version Group 3 - Secure Manager Portal
+        <p style={{ marginTop: '2rem', fontSize: '0.8rem', color: '#FFB800', fontFamily: 'Bebas Neue, sans-serif', letterSpacing: '2px' }}>
+            SYSTEM VERSION GROUP 3 - SECURE MANAGER PORTAL
         </p>
       </div>
     </div>

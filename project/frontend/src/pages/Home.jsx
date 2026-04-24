@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MdDashboard, MdWarehouse, MdLocalShipping, MdGroup, MdCalendarToday, MdLogout, MdLocationCity, MdLocalShipping as MdTruck, MdPerson, MdSecurity, MdPhone, MdCreditCard, MdLightMode, MdDarkMode } from 'react-icons/md';
+import { MdDashboard, MdWarehouse, MdLocalShipping, MdGroup, MdCalendarToday, MdLogout, MdLocationCity, MdLocalShipping as MdTruck, MdPerson, MdSecurity, MdPhone, MdCreditCard, MdLightMode, MdDarkMode, MdAdd } from 'react-icons/md';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import './Home.css';
@@ -16,9 +16,13 @@ export default function Home() {
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.matchMedia('(max-width: 700px)').matches ? false : true);
-  const [stats, setStats] = useState({ users: 0, warehouses: 0, shipments: 0 });
+  const [stats, setStats] = useState({ users: 0, warehouses: 0, shipments: 0, drivers: 0 });
   const [dataList, setDataList] = useState([]);
   const [usersList, setUsersList] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [activitiesList, setActivitiesList] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -40,15 +44,29 @@ export default function Home() {
     shipment_item: '',
     shipment_quantity: '',
     shipment_status: 'In Transit',
+    item_image: null,
   });
   const shipmentStatusOptions = ['In Transit', 'Delivered', 'Pending'];
+
+  // Helper function to get status stamp class
+  const getStatusClass = (status) => {
+    const statusLower = status.toLowerCase();
+    if (statusLower === 'delivered') return 'delivered';
+    if (statusLower === 'in transit') return 'in-transit';
+    if (statusLower === 'pending' || statusLower === 'delayed') return 'pending';
+    return 'pending'; // default
+  };
 
   const navigate = useNavigate();
 
   // 2. HELPER FUNCTIONS
   const handleQuickInput = (e) => {
-    const { name, value } = e.target;
-    setQuickSetup(qs => ({ ...qs, [name]: value }));
+    const { name, value, files } = e.target;
+    if (name === 'item_image') {
+      setQuickSetup(qs => ({ ...qs, item_image: files[0] }));
+    } else {
+      setQuickSetup(qs => ({ ...qs, [name]: value }));
+    }
   };
 
   const handleQuickSave = async () => {
@@ -60,36 +78,65 @@ export default function Home() {
     }
 
     try {
-      const payload = {
-        warehouse_name,
-        warehouse_location,
-        driver_name,
-        licenseNo,
-        vehicleType,
-        contactNo,
-        licenseExpiry,
-        shipment_item,
-        shipment_quantity: parseInt(shipment_quantity, 10),
-        shipment_status
-      };
+      // Create FormData to send file and form data
+      const formData = new FormData();
+      formData.append('warehouse_name', warehouse_name);
+      formData.append('warehouse_location', warehouse_location);
+      formData.append('driver_name', driver_name);
+      formData.append('licenseNo', licenseNo);
+      formData.append('vehicleType', vehicleType);
+      formData.append('contactNo', contactNo);
+      formData.append('licenseExpiry', licenseExpiry);
+      formData.append('shipment_item', shipment_item);
+      formData.append('shipment_quantity', shipment_quantity);
+      formData.append('shipment_status', shipment_status);
+      
+      // Append logged-in user info for activity logging
+      if (user && user.id) {
+        formData.append('user_id', user.id);
+        formData.append('username', user.username);
+      }
+      
+      // Append image file if selected
+      if (quickSetup.item_image) {
+        formData.append('item_image', quickSetup.item_image);
+      }
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/quick_setup.php`, {
+      // CRITICAL: Do NOT set Content-Type header - browser handles it automatically
+      const res = await fetch(`http://localhost/backend/quick_setup.php`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: formData
       });
+      
       const data = await res.json();
       if (data.success) {
         setIsQuickSetupOpen(false);
         showNotif('Quick Setup successful!', 'success');
-        setQuickSetup({ warehouse_name: '', warehouse_location: '', driver_name: '', licenseNo: '', vehicleType: '', contactNo: '', licenseExpiry: '', shipment_item: '', shipment_quantity: '', shipment_status: 'In Transit' });
-        loadViewData(currentView); // refresh current view
-        loadViewData('dashboard'); // refresh stats
+        setQuickSetup({ 
+          warehouse_name: '', 
+          warehouse_location: '', 
+          driver_name: '', 
+          licenseNo: '', 
+          vehicleType: '', 
+          contactNo: '', 
+          licenseExpiry: '', 
+          shipment_item: '', 
+          shipment_quantity: '', 
+          shipment_status: 'In Transit', 
+          item_image: null 
+        });
+        // Clear file input
+        const fileInput = document.querySelector('input[name="item_image"]');
+        if (fileInput) fileInput.value = '';
+        
+        loadViewData(currentView);
+        loadViewData('dashboard');
       } else {
         showNotif(data.message || 'Quick setup failed.', 'error');
       }
     } catch (err) {
-      showNotif('Quick setup failed.', 'error');
+      console.error('Quick setup error:', err);
+      showNotif('Quick setup failed: ' + err.message, 'error');
     }
   };
 
@@ -126,18 +173,46 @@ export default function Home() {
 
     try {
       // Added timestamp to prevent browser from caching the old list
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}?t=${new Date().getTime()}`);
+      const res = await fetch(`http://localhost/backend/${endpoint}?t=${new Date().getTime()}`);
       const data = await res.json();
       if (data.success) {
         if (view === 'dashboard') {
-            setStats(data.stats);
-            const userRes = await fetch(`${import.meta.env.VITE_API_URL}/get_all_users.php?t=${new Date().getTime()}`);
+            setStats({
+              users: data.stats.users || 0,
+              warehouses: data.stats.warehouses || 0,
+              shipments: data.stats.shipments || 0,
+              drivers: data.stats.drivers || 0
+            });
+            const userRes = await fetch(`http://localhost/backend/get_all_users.php?t=${new Date().getTime()}`);
             const userData = await userRes.json();
             if (userData.success) setUsersList(userData.users);
+            
+            // Fetch recent activity for activity log
+            setLoadingActivities(true);
+            try {
+              const activityRes = await fetch(`http://localhost/backend/get_recent_activity.php?t=${new Date().getTime()}`);
+              const activityData = await activityRes.json();
+              console.log('Activity Data:', activityData);
+              if (activityData.success && activityData.data) {
+                setActivitiesList(activityData.data);
+                console.log('Activities List Set:', activityData.data);
+              } else {
+                setActivitiesList([]);
+              }
+            } catch (activityErr) {
+              console.error('Activity fetch error:', activityErr);
+              setActivitiesList([]);
+            } finally {
+              setLoadingActivities(false);
+            }
         }
         else setDataList(data.data || []);
+      } else {
+        console.error('API returned success: false', data);
       }
-    } catch (err) { console.error("Load failed"); }
+    } catch (err) { 
+      console.error("Load failed:", err); 
+    }
     setTimeout(() => setLoading(false), 500);
   };
 
@@ -186,7 +261,7 @@ export default function Home() {
     if (!selectedItem || !selectedItem.id) return;
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/delete_record.php`, {
+      const res = await fetch(`http://localhost/backend/delete_record.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: selectedItem.id, table: currentView })
@@ -213,7 +288,7 @@ export default function Home() {
     <div className="wms-main-layout">
       {notif.show && (
         <div style={{
-          position: 'fixed', top: '20px', right: '20px', zIndex: 9999,
+          position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
           background: notif.type === 'success' ? '#10b981' : '#ef4444',
           color: '#fff', padding: '12px 24px', borderRadius: '8px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontWeight: 'bold'
@@ -265,7 +340,7 @@ export default function Home() {
               <div className="wms-logout-modal-body">Are you sure you want to log out?</div>
               <div className="wms-logout-modal-actions">
                 <button className="wms-logout-modal-btn wms-logout-ok" style={{background:'#dc2626',color:'#fff'}} onClick={() => { localStorage.clear(); navigate('/login'); }}>OK</button>
-                <button className="wms-logout-modal-btn wms-logout-cancel" style={{background:'#22c55e',color:'#fff',outline:'none',boxShadow:'none'}} onClick={() => setShowLogoutModal(false)} onMouseDown={e => e.preventDefault()}>Cancel</button>
+                <button className="wms-logout-modal-btn wms-logout-cancel" style={{background:'#F37021',color:'#fff',outline:'none',boxShadow:'none'}} onClick={() => setShowLogoutModal(false)} onMouseDown={e => e.preventDefault()}>Cancel</button>
               </div>
             </div>
           </div>
@@ -276,7 +351,15 @@ export default function Home() {
         {loading && (
           <div className="wms-loading-overlay wms-loading-overlay-maincontent">
             <div className="wms-loading-spinner"></div>
-            <div className="wms-loading-text">Loading...</div>
+            <div className="wms-loading-bars">
+              <div className="wms-loading-bar"></div>
+              <div className="wms-loading-bar"></div>
+              <div className="wms-loading-bar"></div>
+              <div className="wms-loading-bar"></div>
+              <div className="wms-loading-bar"></div>
+            </div>
+            <div className="wms-loading-text">Loading Warehouse</div>
+            <div className="wms-loading-caution"></div>
           </div>
         )}
         <header className="wms-top-header" style={{display:'flex',alignItems:'center',gap:16}}>
@@ -285,16 +368,16 @@ export default function Home() {
           <button 
             onClick={toggleTheme}
             style={{
-              background: isDark ? '#eab308' : '#2563eb',
-              color: isDark ? '#1a1a1a' : '#fff',
+              background: '#F37021',
+              color: '#fff',
               border: 'none',
-              borderRadius: '50%',
+              borderRadius: '4px',
               width: '40px',
               height: '40px',
               fontSize: '1.2rem',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-              transition: 'all 0.3s',
+              boxShadow: '0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)',
+              transition: 'all 0.2s',
               marginLeft: 'auto',
               marginRight: '10px',
               display: 'flex',
@@ -305,9 +388,14 @@ export default function Home() {
             {isDark ? <MdLightMode style={{ fontSize: '1.3rem' }} /> : <MdDarkMode style={{ fontSize: '1.3rem' }} />}
           </button>
           <button
-            style={{background: isDark ? '#eab308' : '#2563eb',color: isDark ? '#1a1a1a' : '#fff',border:'none',borderRadius:8,padding:'10px 18px',fontWeight:'bold',fontSize:'1em',cursor:'pointer',boxShadow:'0 2px 8px #0001'}} 
+            style={{background: '#F37021',color: '#fff',border:'none',borderRadius:4,width:'40px',height:'40px',fontSize:'1.5rem',cursor:'pointer',boxShadow:'0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)',transition:'all 0.2s',display:'flex',alignItems:'center',justifyContent:'center'}} 
             onClick={()=>setIsQuickSetupOpen(true)}
-          >+ Quick Setup</button>
+            onMouseDown={(e) => e.currentTarget.style.transform = 'translateY(2px)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            title="Quick Setup"
+          >
+            <MdAdd style={{ fontSize: '1.8rem' }} />
+          </button>
         </header>
 
         {/* QUICK SETUP MODAL */}
@@ -360,6 +448,35 @@ export default function Home() {
                    <input className="wms-search-input" name="shipment_item" value={quickSetup.shipment_item} onChange={handleQuickInput} placeholder="Item Name" style={{width:'100%',marginBottom:'10px'}} />
                 </div>
                 <div className="form-group" style={{marginBottom:'15px'}}>
+                   <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Item Image</label>
+                   <div style={{position:'relative',marginBottom:'10px'}}>
+                     <input 
+                       type="file" 
+                       name="item_image" 
+                       accept="image/*"
+                       onChange={handleQuickInput}
+                       style={{
+                         width:'100%',
+                         padding:'12px',
+                         background:'#121417',
+                         border:'2px solid #343A40',
+                         borderRadius:'4px',
+                         color:'#fff',
+                         cursor:'pointer',
+                         transition:'border-color 0.3s ease'
+                       }}
+                       onFocus={(e) => e.target.style.borderColor = '#F37021'}
+                       onBlur={(e) => e.target.style.borderColor = '#343A40'}
+                     />
+                     {quickSetup.item_image && (
+                       <div style={{marginTop:'10px',padding:'8px',background:'#1E2126',borderRadius:'4px',border:'1px solid #FFB800',color:'#FFB800',fontSize:'0.85rem',display:'flex',alignItems:'center',gap:'8px'}}>
+                         <span>📦</span>
+                         <span>{quickSetup.item_image.name}</span>
+                       </div>
+                     )}
+                   </div>
+                </div>
+                <div className="form-group" style={{marginBottom:'15px'}}>
                    <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Quantity <span style={{color:'red'}}>*</span></label>
                    <input className="wms-search-input" type="number" name="shipment_quantity" value={quickSetup.shipment_quantity} onChange={handleQuickInput} placeholder="Quantity" style={{width:'100%',marginBottom:'10px'}} />
                 </div>
@@ -370,7 +487,7 @@ export default function Home() {
                    </select>
                 </div>
 
-                <button onClick={handleQuickSave} style={{width:'100%',padding:'15px',background:'#10b981',color:'#fff',border:'none',borderRadius:8,fontWeight:'bold',fontSize:'1.1em',cursor:'pointer',letterSpacing:1}}>ACTIVATE SETUP</button>
+                <button onClick={handleQuickSave} style={{width:'100%',padding:'15px',background:'#F37021',color:'#fff',border:'none',borderRadius:4,fontWeight:'bold',fontSize:'1.1em',cursor:'pointer',letterSpacing:1,boxShadow:'0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)',textTransform:'uppercase',transition:'all 0.2s'}}>ACTIVATE SETUP</button>
               </div>
             </div>
           </div>
@@ -386,8 +503,8 @@ export default function Home() {
               <div className="wms-modal-overlay" onClick={() => setIsProfileModalOpen(false)}>
                   <div className="wms-modal-content wide-modal" onClick={(e) => e.stopPropagation()} style={{ padding: '0', overflow: 'hidden' }}>
                       <div style={{ background: '#f8fafc', padding: '30px', textAlign: 'center', borderBottom: '1px solid #eee', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <MdSecurity style={{ fontSize: '4.5rem', color: '#3b82f6' }} />
-                          <h3 style={{ marginTop: '10px', fontSize: '0.8rem', color: '#2563eb', fontWeight: '900', letterSpacing: '2px' }}>ADMIN NODE</h3>
+                          <MdSecurity style={{ fontSize: '4.5rem', color: '#F37021' }} />
+                          <h3 style={{ marginTop: '10px', fontSize: '0.8rem', color: '#F37021', fontWeight: '900', letterSpacing: '2px' }}>ADMIN NODE</h3>
                       </div>
                       <div style={{ padding: '30px' }}>
                           <div className="wms-modal-table-wrapper">
@@ -423,11 +540,11 @@ export default function Home() {
                         <MdTruck style={{ fontSize: '80px', color: '#fff' }} />
                       )}
                     </div>
-                    <div style={{ padding: '30px', textAlign: 'center' }}>
-                      <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '800' }}>RECORD #00{(currentView === 'warehouses' ? selectedItem.id : (selectedItem.warehouse_id || selectedItem.id)).toString().padStart(2, '0')}</span>
-                      <h2 style={{ margin: '10px 0' }}>{currentView === 'shipments' ? selectedItem.item_name : selectedItem.name}</h2>
+                    <div style={{ padding: '30px 20px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: isDark ? '#F37021' : '#1f2937', fontWeight: '800', display: 'block', marginBottom: '10px' }}>RECORD #00{(currentView === 'warehouses' ? selectedItem.id : (selectedItem.warehouse_id || selectedItem.id)).toString().padStart(2, '0')}</span>
+                      <h2 style={{ margin: '10px 0 20px 0', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', maxWidth: '100%', padding: '0 10px' }}>{currentView === 'shipments' ? selectedItem.item_name : selectedItem.name}</h2>
                       {currentView === 'warehouses' ? (
-                        <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Location: {selectedItem.location}</p>
+                        <p style={{ color: '#6b7280', fontSize: '0.9rem', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', padding: '0 10px' }}>Location: {selectedItem.location}</p>
                       ) : currentView === 'drivers' ? (
                         <>
                           <p style={{ margin: '5px 0', fontSize: '0.9rem' }}>
@@ -443,10 +560,62 @@ export default function Home() {
                         </>
                       ) : (
                         <>
-                          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Status: {selectedItem.status}</p>
-                          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Quantity: {selectedItem.quantity || 'N/A'}</p>
-                          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Warehouse: {selectedItem.warehouse_name}</p>
-                          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>Driver: {selectedItem.driver_name ? selectedItem.driver_name : 'Unassigned'}</p>
+                          {selectedItem.item_image && (
+                            <div style={{
+                              marginBottom:'15px',
+                              borderRadius:'4px',
+                              overflow:'hidden',
+                              border:'2px solid #343A40',
+                              position:'relative',
+                              height:'220px'
+                            }}>
+                              <img 
+                                src={selectedItem.item_image !== 'default_item.jpg' 
+                                  ? `http://localhost/backend/uploads/${selectedItem.item_image}` 
+                                  : 'http://localhost/backend/uploads/default_item.jpg'}
+                                alt={selectedItem.item_name}
+                                style={{
+                                  width:'100%',
+                                  height:'100%',
+                                  objectFit:'cover',
+                                  objectPosition:'center'
+                                }}
+                                onError={(e) => {
+                                  e.target.src = 'http://localhost/backend/uploads/default_item.jpg';
+                                }}
+                              />
+                              <div style={{
+                                position:'absolute',
+                                top:0,
+                                left:0,
+                                right:0,
+                                height:'4px',
+                                background:'repeating-linear-gradient(45deg, #000, #000 8px, #FFB800 8px, #FFB800 16px)'
+                              }}></div>
+                              {/* Status Stamp in Modal */}
+                              <div className={`status-stamp ${getStatusClass(selectedItem.status)}`} style={{top:'20px',right:'20px'}}>
+                                {selectedItem.status}
+                              </div>
+                            </div>
+                          )}
+                          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '8px 0', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', padding: '0 10px', textAlign: 'left' }}>
+                            <strong style={{color:'#1f2937'}}>Status:</strong> 
+                            <span className={`status-stamp ${getStatusClass(selectedItem.status)}`} style={{
+                              position:'relative',
+                              display:'inline-block',
+                              marginLeft:'10px',
+                              padding:'4px 12px',
+                              fontSize:'0.8rem',
+                              transform:'rotate(0deg)',
+                              top:'0',
+                              right:'0'
+                            }}>
+                              {selectedItem.status}
+                            </span>
+                          </p>
+                          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '5px 0', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', padding: '0 10px', textAlign: 'left' }}>Quantity: {selectedItem.quantity || 'N/A'}</p>
+                          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '5px 0', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', padding: '0 10px', textAlign: 'left' }}>Warehouse: {selectedItem.warehouse_name}</p>
+                          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '5px 0', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', padding: '0 10px', textAlign: 'left' }}>Driver: {selectedItem.driver_name ? selectedItem.driver_name : 'Unassigned'}</p>
                         </>
                       )}
                       <div style={{ display: 'flex', gap: '10px', marginTop: '25px' }}>
@@ -502,8 +671,36 @@ export default function Home() {
             {currentView === 'dashboard' && (
               <>
                 <div className="wms-card"><div className="wms-card-top accent"><span className="wms-label">USERS</span><h2 className="wms-value">{stats.users} Managers</h2></div><div className="wms-card-bottom">Active Access</div></div>
-                <div className="wms-card"><div className="wms-card-top"><span className="wms-label">LOGISTICS</span><h2 className="wms-value">{stats.warehouses} Warehouses</h2></div><div className="wms-card-bottom">Authorized Hubs</div></div>
-                <div className="wms-card"><div className="wms-card-top"><span className="wms-label">OPERATIONS</span><h2 className="wms-value">{stats.shipments} Shipments</h2></div><div className="wms-card-bottom">Live Tracking</div></div>
+                <div className="wms-card wms-card-clickable" onClick={() => loadViewData('warehouses')}>
+                  <div className="wms-card-top">
+                    <span className="wms-label">LOGISTICS</span>
+                    <h2 className="wms-value">{stats.warehouses} Warehouses</h2>
+                  </div>
+                  <div className="wms-card-bottom">
+                    <span>Authorized Hubs</span>
+                    <span style={{color: 'var(--wms-blue)', fontWeight: 'bold', fontSize: '0.85rem'}}>View ❯</span>
+                  </div>
+                </div>
+                <div className="wms-card wms-card-clickable" onClick={() => loadViewData('shipments')}>
+                  <div className="wms-card-top">
+                    <span className="wms-label">OPERATIONS</span>
+                    <h2 className="wms-value">{stats.shipments} Shipments</h2>
+                  </div>
+                  <div className="wms-card-bottom">
+                    <span>Live Tracking</span>
+                    <span style={{color: 'var(--wms-blue)', fontWeight: 'bold', fontSize: '0.85rem'}}>View ❯</span>
+                  </div>
+                </div>
+                <div className="wms-card wms-card-clickable" onClick={() => loadViewData('drivers')}>
+                  <div className="wms-card-top">
+                    <span className="wms-label">PERSONNEL</span>
+                    <h2 className="wms-value">{stats.drivers} Drivers</h2>
+                  </div>
+                  <div className="wms-card-bottom">
+                    <span>On Duty</span>
+                    <span style={{color: 'var(--wms-blue)', fontWeight: 'bold', fontSize: '0.85rem'}}>View ❯</span>
+                  </div>
+                </div>
               </>
             )}
 
@@ -523,7 +720,7 @@ export default function Home() {
                         </p>
                       </div>
                       <div className="wms-card-logo-circle">
-                        <MdPerson style={{ fontSize: '1.7em', color: isDark ? '#eab308' : '#2563eb' }} />
+                        <MdPerson style={{ fontSize: '1.7em', color: '#F37021' }} />
                       </div>
                     </div>
                     <div style={{ padding: '12px 20px 15px 20px', fontSize: '0.8rem', color: '#4b5563', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -559,9 +756,9 @@ export default function Home() {
                         <h2 className="wms-item-name">{item.name}</h2>
                         <p className="wms-item-sub">{item.location}</p>
                       </div>
-                      <div className="wms-card-logo-circle">
-                        <MdLocationCity style={{ fontSize: '1.7em', color: isDark ? '#eab308' : '#2563eb' }} />
-                      </div>
+                  <div className="wms-card-logo-circle">
+                    <MdLocationCity style={{ fontSize: '1.7em', color: isDark ? '#F37021' : '#F37021' }} />
+                  </div>
                     </div>
                     <div className="wms-card-bottom">
                         <span>{item.warehouse_name || 'System Verified'}</span>
@@ -576,25 +773,47 @@ export default function Home() {
               filteredDataList.length === 0 ? (
                 <div style={{width:'100%',textAlign:'center',color:'#6b7280',marginTop:40,fontSize:'1.1em',gridColumn:'1/-1'}}>No records found.</div>
               ) : (
-                filteredDataList.map((item, index) => (
-                  <div key={index} className="wms-card">
-                    <div className="wms-card-top">
-                      <div>
-                        <span className="wms-label">#00{(item.warehouse_id || item.id).toString().padStart(2, '0')}</span>
-                        <h2 className="wms-item-name">{item.item_name}</h2>
-                        <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#6b7280' }}>Qty: {item.quantity || 'N/A'}</p>
+                filteredDataList.map((item, index) => {
+                  const imageUrl = item.item_image 
+                    ? `http://localhost/backend/uploads/${item.item_image}` 
+                    : 'http://localhost/backend/uploads/default_item.jpg';
+                  
+                  const statusClass = getStatusClass(item.status);
+                  
+                  return (
+                    <div key={index} className="wms-card">
+                      <div className="wms-shipment-image-container">
+                        <img 
+                          src={imageUrl}
+                          alt={item.item_name}
+                          className="wms-shipment-image"
+                          onError={(e) => {
+                            e.target.src = 'http://localhost/backend/uploads/default_item.jpg';
+                          }}
+                        />
+                        <div className="wms-shipment-image-overlay"></div>
+                        {/* Industrial Status Stamp */}
+                        <div className={`status-stamp ${statusClass}`}>
+                          {item.status}
+                        </div>
                       </div>
-                      <div className="wms-card-logo-circle">
-                        <MdTruck style={{ fontSize: '1.7em', color: isDark ? '#eab308' : '#2563eb' }} />
+                      <div className="wms-card-top" style={{paddingTop:'15px'}}>
+                        <div>
+                          <span className="wms-label">#00{(item.warehouse_id || item.id).toString().padStart(2, '0')}</span>
+                          <h2 className="wms-item-name">{item.item_name}</h2>
+                          <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', color: '#6b7280' }}>Qty: {item.quantity || 'N/A'}</p>
+                        </div>
+                        <div className="wms-card-logo-circle">
+                          <MdTruck style={{ fontSize: '1.7em', color: '#F37021' }} />
+                        </div>
+                      </div>
+                      <div className="wms-card-bottom">
+                          <span style={{ color: '#6b7280', fontSize: '0.85em' }}>Driver: {item.driver_name || 'Unassigned'}</span>
+                          <button className="wms-details-btn" onClick={() => {setSelectedItem(item); setIsDetailModalOpen(true);}}>Details ❯</button>
                       </div>
                     </div>
-                    <div className="wms-card-bottom">
-                        <span>{item.status}</span>
-                        <span style={{ color: '#6b7280', fontSize: '0.85em', marginLeft: 8 }}>Driver: {item.driver_name || 'Unassigned'}</span>
-                        <button className="wms-details-btn" onClick={() => {setSelectedItem(item); setIsDetailModalOpen(true);}}>Details ❯</button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )
             )}
 
@@ -619,6 +838,90 @@ export default function Home() {
                 </div>
             )}
           </div>
+
+          {/* Recent Activity Log */}
+          {currentView === 'dashboard' && (
+            <div style={{ maxWidth: '900px', margin: '40px auto 0 auto' }}>
+              {/* Caution Stripe */}
+              <div style={{
+                height: '6px',
+                background: 'repeating-linear-gradient(45deg, #000, #000 10px, #FFB800 10px, #FFB800 20px)',
+                marginBottom: '20px',
+                borderRadius: '2px'
+              }}></div>
+              
+              <h2 style={{ 
+                color: 'var(--wms-blue)', 
+                fontFamily: 'Bebas Neue, sans-serif', 
+                fontSize: '1.6rem', 
+                letterSpacing: '3px', 
+                marginBottom: '25px',
+                textTransform: 'uppercase'
+              }}>
+                Recent Activity Log
+              </h2>
+              
+              {loadingActivities ? (
+                <div style={{
+                  background: '#1E2126',
+                  padding: '40px',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  border: '2px solid #343A40'
+                }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    border: '4px solid #F37021',
+                    borderTop: '4px solid transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto 15px'
+                  }}></div>
+                  <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>Loading activities...</p>
+                </div>
+              ) : activitiesList.length === 0 ? (
+                <div style={{
+                  background: '#1E2126',
+                  padding: '40px',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  border: '2px solid #343A40'
+                }}>
+                  <MdLocalShipping style={{ fontSize: '3em', color: '#F37021', opacity: 0.3, marginBottom: '15px' }} />
+                  <p style={{ color: '#9ca3af', fontSize: '0.95rem', margin: 0 }}>No recent activities yet. Start by activating a Quick Setup!</p>
+                </div>
+              ) : (
+                <div style={{
+                  background: '#1E2126',
+                  padding: '30px',
+                  borderRadius: '8px',
+                  border: '2px solid #343A40',
+                  position: 'relative'
+                }}>
+                  <div className="activity-log-timeline">
+                    {activitiesList.map((activity, index) => {
+                      return (
+                        <div key={activity.id || index} className="activity-log-item">
+                          <div className="activity-log-dot"></div>
+                          {index < activitiesList.length - 1 && <div className="activity-log-line"></div>}
+                          <div className="activity-log-content">
+                            <div className="activity-log-icon">
+                              <MdLocalShipping style={{ fontSize: '1.3em', color: '#F37021' }} />
+                            </div>
+                            <div className="activity-log-text">
+                              <p className="activity-log-action">{activity.action_text || 'Activity recorded'}</p>
+                              <span className="activity-log-time">Recently added</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>

@@ -6,16 +6,17 @@ const EyeOpen = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height=
 const EyeClosed = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
 
 const styles = {
-  page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a1a1a', fontFamily: 'Inter, sans-serif', position: 'relative', overflow: 'hidden' },
-  glow: { position: 'absolute', top: '-150px', left: '-150px', width: '400px', height: '400px', background: 'rgba(245, 158, 11, 0.1)', filter: 'blur(100px)', borderRadius: '50%', pointerEvents: 'none' },
-  card: { width: '100%', maxWidth: '400px', background: '#2a2a2a', backdropFilter: 'blur(12px)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '2.5rem', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', color: 'white', position: 'relative', zIndex: 1 },
-  title: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', textAlign: 'center', color: '#f59e0b' },
+  page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#121417', fontFamily: 'Roboto Condensed, sans-serif', position: 'relative', overflow: 'hidden' },
+  glow: { position: 'absolute', top: '-150px', left: '-150px', width: '400px', height: '400px', background: 'rgba(243, 112, 33, 0.15)', filter: 'blur(100px)', borderRadius: '50%', pointerEvents: 'none' },
+  card: { width: '100%', maxWidth: '400px', background: '#1E2126', backdropFilter: 'blur(12px)', border: '2px solid #343A40', padding: '2.5rem', borderRadius: '4px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', color: 'white', position: 'relative', zIndex: 1 },
+  cautionStripe: { position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'repeating-linear-gradient(45deg, #000, #000 8px, #FFB800 8px, #FFB800 16px)' },
+  title: { fontSize: '2.2rem', fontWeight: 'bold', marginBottom: '0.5rem', textAlign: 'center', color: '#F37021', fontFamily: 'Bebas Neue, sans-serif', letterSpacing: '3px' },
   subtitle: { color: '#9ca3af', textAlign: 'center', marginBottom: '2rem', fontSize: '0.9rem' },
   label: { display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#d1d5db', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  input: { width: '100%', padding: '0.75rem', background: '#1a1a1a', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px', color: 'white', marginBottom: '1.25rem', outline: 'none', transition: 'border-color 0.3s ease' },
-  btn: { width: '100%', padding: '0.8rem', background: '#f59e0b', color: '#1a1a1a', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', marginTop: '1rem', boxShadow: '0 4px 14px 0 rgba(245, 158, 11, 0.4)' },
-  error: { background: '#450a0a', border: '1px solid #991b1b', color: '#fca5a5', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', textAlign: 'center' },
-  link: { color: '#f59e0b', textDecoration: 'none', fontWeight: '500' }
+  input: { width: '100%', padding: '0.75rem', background: '#121417', border: '2px solid #343A40', borderRadius: '4px', color: 'white', marginBottom: '1.25rem', outline: 'none', transition: 'border-color 0.3s ease, box-shadow 0.3s ease' },
+  btn: { width: '100%', padding: '0.9rem', background: '#F37021', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: '700', cursor: 'pointer', marginTop: '1rem', boxShadow: '0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)', textTransform: 'uppercase', letterSpacing: '1px', transition: 'all 0.2s' },
+  error: { background: '#450a0a', border: '1px solid #991b1b', color: '#fca5a5', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem', fontSize: '0.85rem', textAlign: 'center' },
+  link: { color: '#F37021', textDecoration: 'none', fontWeight: '500' }
 };
 
 export default function Login() {
@@ -42,10 +43,24 @@ export default function Login() {
 
   return (
     <div style={styles.page}>
-      <style>{`.login-input:focus { border-color: #f59e0b !important; }`}</style>
+      <style>{`
+        .login-input:focus { 
+          border-color: #F37021 !important; 
+          box-shadow: 0 0 0 3px rgba(243, 112, 33, 0.2) !important;
+        }
+        .login-btn:hover {
+          transform: translateY(2px);
+          box-shadow: 0 2px 0 #C85A1A, 0 4px 6px rgba(0,0,0,0.3) !important;
+        }
+        .login-btn:active {
+          transform: translateY(4px);
+          box-shadow: 0 0 0 #C85A1A, 0 2px 4px rgba(0,0,0,0.3) !important;
+        }
+      `}</style>
       <div style={styles.glow}></div>
       <div style={styles.card}>
-        <div style={styles.title}>Warehouse LMS</div>
+        <div style={styles.cautionStripe}></div>
+        <div style={styles.title}>WAREHOUSE LMS</div>
         <div style={styles.subtitle}>Secure Portal Login</div>
 
         <form onSubmit={handleSubmit} autoComplete="off" spellCheck={false}>
@@ -75,7 +90,7 @@ export default function Login() {
             </button>
           </div>
 
-          <button type="submit" style={styles.btn}>Sign In to Dashboard</button>
+          <button type="submit" className="login-btn" style={styles.btn}>Sign In to Dashboard</button>
           
           <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: '#9ca3af' }}>
             New Manager? <Link to="/register" style={styles.link}>Register Here</Link>

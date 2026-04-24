@@ -24,13 +24,15 @@ try {
     $userCount = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
     $warehouseCount = @$pdo->query("SELECT COUNT(*) FROM warehouses")->fetchColumn() ?: 0;
     $shipmentCount = @$pdo->query("SELECT COUNT(*) FROM shipments")->fetchColumn() ?: 0;
+    $driverCount = @$pdo->query("SELECT COUNT(*) FROM drivers")->fetchColumn() ?: 0;
 
     echo json_encode([
         "success" => true,
         "stats" => [
             "users" => (int)$userCount,
             "warehouses" => (int)$warehouseCount,
-            "shipments" => (int)$shipmentCount
+            "shipments" => (int)$shipmentCount,
+            "drivers" => (int)$driverCount
         ]
     ]);
 

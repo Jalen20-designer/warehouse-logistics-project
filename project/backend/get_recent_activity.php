@@ -4,17 +4,18 @@ header('Content-Type: application/json');
 require_once 'db.php';
 
 try {
-    // LEFT JOIN to get warehouse and driver names, include item_image
-    $sql = "SELECT s.*, w.name as warehouse_name, d.name as driver_name 
+    // Get latest 5 shipments with warehouse and driver info
+    $sql = "SELECT s.id, s.item_name, s.quantity, s.status, s.warehouse_id, s.driver_id,
+            w.name as warehouse_name, d.name as driver_name 
             FROM shipments s 
             LEFT JOIN warehouses w ON s.warehouse_id = w.id 
             LEFT JOIN drivers d ON s.driver_id = d.id 
-            ORDER BY s.id ASC";
+            ORDER BY s.id DESC 
+            LIMIT 5";
     $result = $conn->query($sql);
     $data = [];
     if ($result) {
         while ($row = $result->fetch_assoc()) {
-            // Ensure item_image is included in response
             $data[] = $row;
         }
         echo json_encode(["success" => true, "data" => $data]);
