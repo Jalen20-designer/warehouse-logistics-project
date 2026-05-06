@@ -3,23 +3,25 @@
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
-header('Access-Control-Allow-Origin: http://127.0.0.1:3000');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+// FIX: Pinalitan ang 127.0.0.1 into localhost para tumugma sa React app mo
+header('Access-Control-Allow-Origin: http://localhost:3000');
+header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json');
 
+// Handle Preflight Request (OPTIONS)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
 
 try {
-    // 1. Check if db.php exists
-    if (!file_exists('db.php')) {
+    // 1. FIXED: Nagdagdag ng ../ sa file_exists check
+    if (!file_exists('../db.php')) {
         throw new Exception("db.php file is missing in the backend folder.");
     }
     
-    require_once 'db.php';
+    require_once '../db.php';
 
     // 2. Get the data from React
     $input = file_get_contents("php://input");
@@ -33,6 +35,7 @@ try {
         
         $user = $data['username'];
         $email = $data['email'];
+        // Gumamit ng password_hash para sa security
         $pass = password_hash($data['password'], PASSWORD_DEFAULT);
 
         // 3. Check if email already exists
@@ -59,8 +62,7 @@ try {
     }
 
 } catch (Exception $e) {
-    // This catches ANY error (Database, Typos, Missing files) 
-    // and sends it back to React so it DOES NOT crash.
+    // This catches ANY error and sends it back to React so it DOES NOT crash.
     echo json_encode(["success" => false, "message" => "PHP Error: " . $e->getMessage()]);
 }
 ?>

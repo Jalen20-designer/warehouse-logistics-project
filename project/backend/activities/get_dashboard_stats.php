@@ -3,7 +3,7 @@ header('Access-Control-Allow-Origin: http://localhost:3000');
 header('Content-Type: application/json');
 
 // 1. Force the script to look for db.php in the same folder
-$db_path = __DIR__ . '/db.php';
+$db_path = __DIR__ . '/../db.php';
 
 if (file_exists($db_path)) {
     require_once $db_path;

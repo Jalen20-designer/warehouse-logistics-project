@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Register.css';
 import { Link } from 'react-router-dom';
+import logo from '../assets/logo.png';
 
 // ICONS
 const EyeOpen = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
@@ -36,6 +37,21 @@ export default function Register() {
   const [errors, setErrors] = useState([]); // List ng password requirements
   const [apiError, setApiError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 700);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const logoStyle = {
+    maxWidth: '200px',
+    height: 'auto',
+    cursor: 'pointer',
+    animation: 'logoBubble 3s ease-in-out infinite'
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,7 +66,7 @@ export default function Register() {
     }
 
     try {
-      const res = await fetch('http://localhost/backend/register.php', {
+      const res = await fetch('http://localhost/backend/auth/register.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
@@ -62,80 +78,103 @@ export default function Register() {
   };
 
   return (
-    <div style={styles.page}>
-      <style>{`
-        .register-input:focus { 
-          border-color: #F37021 !important; 
-          box-shadow: 0 0 0 3px rgba(243, 112, 33, 0.2) !important;
-        }
-        .register-btn:hover {
-          transform: translateY(2px);
-          box-shadow: 0 2px 0 #C85A1A, 0 4px 6px rgba(0,0,0,0.3) !important;
-        }
-        .register-btn:active {
-          transform: translateY(4px);
-          box-shadow: 0 0 0 #C85A1A, 0 2px 4px rgba(0,0,0,0.3) !important;
-        }
-      `}</style>
-      <div style={styles.glow}></div>
-      <div style={styles.card}>
-        <div style={styles.cautionStripe}></div>
-        <div style={styles.title}>WAREHOUSE LMS</div>
-        <div style={styles.subtitle}>Create your manager account</div>
+    <>
+      {loading ? (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#121417' }}>
+          <style>{`
+            @keyframes logoHeartbeat {
+              0%, 100% { transform: scale(1); }
+              10% { transform: scale(1.1); }
+              20% { transform: scale(1); }
+              30% { transform: scale(1.15); }
+              40% { transform: scale(1); }
+            }
+          `}</style>
+          <img src={logo} alt="Loading..." style={{ maxWidth: '250px', height: 'auto', animation: 'logoHeartbeat 2s ease-in-out infinite' }} />
+        </div>
+      ) : (
+        <div style={styles.page}>
+          <style>{`
+            @keyframes logoBubble {
+              0%, 100% { transform: translateY(0px) scale(1); }
+              50% { transform: translateY(-10px) scale(1.05); }
+            }
+            .register-input:focus { 
+              border-color: #F37021 !important; 
+              box-shadow: 0 0 0 3px rgba(243, 112, 33, 0.2) !important;
+            }
+            .register-btn:hover {
+              transform: translateY(2px);
+              box-shadow: 0 2px 0 #C85A1A, 0 4px 6px rgba(0,0,0,0.3) !important;
+            }
+            .register-btn:active {
+              transform: translateY(4px);
+              box-shadow: 0 0 0 #C85A1A, 0 2px 4px rgba(0,0,0,0.3) !important;
+            }
+          `}</style>
+          <div style={styles.glow}></div>
+          <div style={styles.card}>
+            <div style={styles.cautionStripe}></div>
+            <Link to="/" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <img src={logo} alt="Warehouse LMS" style={logoStyle} />
+            </Link>
+            <div style={styles.subtitle}>Create your manager account</div>
 
-        {success ? (
-          <div style={{ textAlign: 'center' }}>
-            <div style={styles.success}>Registration Successful!</div>
-            <Link to="/login" style={{ color: '#F37021', textDecoration: 'none' }}>Proceed to Login →</Link>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} autoComplete="off" spellCheck={false}>
-            {/* API Errors */}
-            {apiError && <div style={styles.errorBox}>{apiError}</div>}
-
-            {/* PASSWORD REQUIREMENTS LIST */}
-            {errors.length > 0 && (
-              <div style={styles.errorBox}>
-                <strong>Security Requirements:</strong>
-                <ul style={{ marginTop: '5px', paddingLeft: '1.2rem' }}>
-                  {errors.map((e, i) => <li key={i}>{e}</li>)}
-                </ul>
+            {success ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={styles.success}>Registration Successful!</div>
+                <Link to="/login" style={{ color: '#F37021', textDecoration: 'none' }}>Proceed to Login →</Link>
               </div>
+            ) : (
+              <form onSubmit={handleSubmit} autoComplete="off" spellCheck={false}>
+                {/* API Errors */}
+                {apiError && <div style={styles.errorBox}>{apiError}</div>}
+
+                {/* PASSWORD REQUIREMENTS LIST */}
+                {errors.length > 0 && (
+                  <div style={styles.errorBox}>
+                    <strong>Security Requirements:</strong>
+                    <ul style={{ marginTop: '5px', paddingLeft: '1.2rem' }}>
+                      {errors.map((e, i) => <li key={i}>{e}</li>)}
+                    </ul>
+                  </div>
+                )}
+                
+                <label style={styles.label}>Username</label>
+                <input className="register-input" style={styles.input} type="text" autoComplete="new-username" name="register-username" onChange={(e) => setForm({...form, username: e.target.value})} required />
+
+                <label style={styles.label}>Email Address</label>
+                <input className="register-input" style={styles.input} type="email" autoComplete="new-email" name="register-email" onChange={(e) => setForm({...form, email: e.target.value})} required />
+
+                <label style={styles.label}>Password</label>
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    className="register-input"
+                    style={styles.input} 
+                    type={showPassword ? "text" : "password"} 
+                    autoComplete="new-password" 
+                    name="register-password"
+                    onChange={(e) => setForm({...form, password: e.target.value})} 
+                    required 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ position: 'absolute', right: '12px', top: '10px', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                  >
+                    {showPassword ? <EyeOpen /> : <EyeClosed />}
+                  </button>
+                </div>
+
+                <button type="submit" className="register-btn" style={styles.btn}>Register Manager</button>
+                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: '#9ca3af' }}>
+                  Already a manager? <Link to="/login" style={{ color: '#F37021', textDecoration: 'none' }}>Login</Link>
+                </p>
+              </form>
             )}
-            
-            <label style={styles.label}>Username</label>
-            <input className="register-input" style={styles.input} type="text" autoComplete="new-username" name="register-username" onChange={(e) => setForm({...form, username: e.target.value})} required />
-
-            <label style={styles.label}>Email Address</label>
-            <input className="register-input" style={styles.input} type="email" autoComplete="new-email" name="register-email" onChange={(e) => setForm({...form, email: e.target.value})} required />
-
-            <label style={styles.label}>Password</label>
-            <div style={{ position: 'relative' }}>
-              <input 
-                className="register-input"
-                style={styles.input} 
-                type={showPassword ? "text" : "password"} 
-                autoComplete="new-password" 
-                name="register-password"
-                onChange={(e) => setForm({...form, password: e.target.value})} 
-                required 
-              />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)}
-                style={{ position: 'absolute', right: '12px', top: '10px', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
-              >
-                {showPassword ? <EyeOpen /> : <EyeClosed />}
-              </button>
-            </div>
-
-            <button type="submit" className="register-btn" style={styles.btn}>Register Manager</button>
-            <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: '#9ca3af' }}>
-              Already a manager? <Link to="/login" style={{ color: '#F37021', textDecoration: 'none' }}>Login</Link>
-            </p>
-          </form>
-        )}
-      </div>
-    </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

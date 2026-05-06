@@ -12,7 +12,7 @@
    border-radius: 50%;
    width: 700px;
    height: 700px;
-   background: radial-gradient(circle at 30% 30%, #2563eb 0%, #7c3aed 60%, #fff 100%);
+   background: radial-gradient(circle at 30% 30%, #F37021 0%, #FFB800 60%, #fff 100%);
    opacity: 0.28;
    filter: blur(80px);
    z-index: 0;
@@ -27,7 +27,7 @@
  .landing-container::after {
    bottom: -220px;
    right: -220px;
-   background: radial-gradient(circle at 70% 70%, #7c3aed 0%, #2563eb 60%, #fff 100%);
+   background: radial-gradient(circle at 70% 70%, #FFB800 0%, #F37021 60%, #fff 100%);
    animation-delay: 10s;
  }
 @keyframes float {
