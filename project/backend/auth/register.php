@@ -3,7 +3,7 @@
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
-// FIX: Pinalitan ang 127.0.0.1 into localhost para tumugma sa React app mo
+// localhost para tumugma sa React app mo
 header('Access-Control-Allow-Origin: http://localhost:3000');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');

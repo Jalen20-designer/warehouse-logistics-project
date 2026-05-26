@@ -13,5 +13,8 @@ if (!empty($data['name']) && !empty($data['location'])) {
     } catch (Exception $e) {
         echo json_encode(["success" => false, "message" => $e->getMessage()]);
     }
+} else {
+    // ITO ANG MAGA-ADVISE SA ATIN KUNG BAKIT WALANG LUMALABAS
+    echo json_encode(["success" => false, "message" => "Data received:", "received_data" => $data]);
 }
 ?>

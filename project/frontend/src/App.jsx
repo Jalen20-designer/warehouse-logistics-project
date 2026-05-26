@@ -3,6 +3,7 @@ import Landing from './pages/Landing'
 import Register from './pages/Register'
 import Login from './pages/Login'
 import Home from './pages/Home'
+import Profile from './pages/Profile'
 import ProtectedRoute from './components/ProtectedRoute'
 import { ThemeProvider } from './context/ThemeContext'
 
@@ -34,6 +35,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             }
           />

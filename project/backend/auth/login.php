@@ -14,8 +14,8 @@ if (isset($data['email']) && isset($data['password'])) {
         $stmt->execute([$email]);
         $user = $stmt->fetch();
 
-        // Paalala: Kung plain text ang password mo sa DB, tanggalin ang password_verify
-        // Pero kung naka-hash (recommended), hayaan lang ito.
+        // Kung plain text ang password sa DB, tanggalin
+        // Pero kung naka-hash (recommended), hayaan lang ito
         if ($user && ($password === $user['password'] || password_verify($password, $user['password']))) {
             echo json_encode([
                 "success" => true,

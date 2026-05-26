@@ -9,15 +9,15 @@ const EyeClosed = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" heigh
 const styles = {
   page: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#121417', fontFamily: 'Roboto Condensed, sans-serif', position: 'relative', overflow: 'hidden' },
   glow: { position: 'absolute', top: '-150px', left: '-150px', width: '400px', height: '400px', background: 'rgba(243, 112, 33, 0.15)', filter: 'blur(100px)', borderRadius: '50%', pointerEvents: 'none' },
-  card: { width: '100%', maxWidth: '400px', background: '#1E2126', backdropFilter: 'blur(12px)', border: '2px solid #343A40', padding: '2.5rem', borderRadius: '4px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', color: 'white', position: 'relative', zIndex: 1 },
+  card: { width: '100%', maxWidth: '360px', background: '#1E2126', backdropFilter: 'blur(12px)', border: '2px solid #343A40', padding: '1.8rem', borderRadius: '4px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', color: 'white', position: 'relative', zIndex: 1 },
   cautionStripe: { position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'repeating-linear-gradient(45deg, #000, #000 8px, #FFB800 8px, #FFB800 16px)' },
   title: { fontSize: '2.2rem', fontWeight: 'bold', marginBottom: '0.5rem', textAlign: 'center', color: '#F37021', fontFamily: 'Bebas Neue, sans-serif', letterSpacing: '3px' },
-  subtitle: { color: '#9ca3af', textAlign: 'center', marginBottom: '2rem', fontSize: '0.9rem' },
-  label: { display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#d1d5db', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  input: { width: '100%', padding: '0.75rem', background: '#121417', border: '2px solid #343A40', borderRadius: '4px', color: 'white', marginBottom: '1.25rem', outline: 'none', transition: 'border-color 0.3s ease, box-shadow 0.3s ease' },
-  btn: { width: '100%', padding: '0.9rem', background: '#F37021', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: '700', cursor: 'pointer', marginTop: '1rem', boxShadow: '0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)', textTransform: 'uppercase', letterSpacing: '1px', transition: 'all 0.2s' },
-  error: { background: '#450a0a', border: '1px solid #991b1b', color: '#fca5a5', padding: '0.75rem', borderRadius: '4px', marginBottom: '1rem', fontSize: '0.85rem', textAlign: 'center' },
-  link: { color: '#F37021', textDecoration: 'none', fontWeight: '500' }
+  subtitle: { color: '#9ca3af', textAlign: 'center', marginBottom: '1.2rem', fontSize: '0.85rem' },
+  label: { display: 'block', fontSize: '0.7rem', fontWeight: '600', color: '#d1d5db', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' },
+  input: { width: '100%', padding: '0.6rem', background: '#121417', border: '2px solid #343A40', borderRadius: '4px', color: 'white', marginBottom: '0.8rem', outline: 'none', transition: 'border-color 0.3s ease, box-shadow 0.3s ease', fontSize: '0.9rem' },
+  btn: { width: '100%', padding: '0.75rem', background: '#F37021', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: '700', cursor: 'pointer', marginTop: '0.7rem', boxShadow: '0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)', textTransform: 'uppercase', letterSpacing: '1px', transition: 'all 0.2s', fontSize: '0.85rem' },
+  error: { background: '#450a0a', border: '1px solid #991b1b', color: '#fca5a5', padding: '0.5rem', borderRadius: '4px', marginBottom: '0.7rem', fontSize: '0.7rem', textAlign: 'center' },
+  link: { color: '#F37021', textDecoration: 'none', fontWeight: '500', fontSize: '0.85rem' }
 };
 
 export default function Login() {
@@ -52,6 +52,7 @@ export default function Login() {
       const data = await res.json();
       if (data.success) {
         localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('user_id', data.user.id);  
         navigate('/home');
       } else setError(data.message);
     } catch (err) { setError('Login connection failed.'); }

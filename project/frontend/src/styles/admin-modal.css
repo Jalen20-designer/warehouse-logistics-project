@@ -1,0 +1,15 @@
+/* Modal size adjustments for Admin Node */
+.wms-modal-content.wide-modal {
+  max-width: 480px !important; /* Adjust width as needed */
+  width: 90vw;
+  min-width: 320px;
+  border-radius: 24px;
+}
+
+@media (max-width: 600px) {
+  .wms-modal-content.wide-modal {
+    max-width: 98vw !important;
+    min-width: unset;
+    border-radius: 12px;
+  }
+}

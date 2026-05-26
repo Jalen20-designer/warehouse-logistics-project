@@ -1,4 +1,5 @@
 import React from 'react';
+import defaultItemImg from '../assets/default_item.jpg';
 import { MdLocalShipping as MdTruck } from 'react-icons/md';
 
 export default function ShipmentView({ filteredDataList, setSelectedItem, setIsDetailModalOpen, getStatusClass }) {
@@ -10,7 +11,7 @@ export default function ShipmentView({ filteredDataList, setSelectedItem, setIsD
         filteredDataList.map((item, index) => {
           const imageUrl = item.item_image 
             ? `http://localhost/backend/uploads/${item.item_image}` 
-            : 'http://localhost/backend/uploads/default_item.jpg';
+            : defaultItemImg;
           
           const statusClass = getStatusClass(item.status);
           
@@ -22,7 +23,8 @@ export default function ShipmentView({ filteredDataList, setSelectedItem, setIsD
                   alt={item.item_name}
                   className="wms-shipment-image"
                   onError={(e) => {
-                    e.target.src = 'http://localhost/backend/uploads/default_item.jpg';
+                    e.target.onerror = null;
+                    e.target.src = defaultItemImg;
                   }}
                 />
                 <div className="wms-shipment-image-overlay"></div>

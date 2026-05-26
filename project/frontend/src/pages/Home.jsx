@@ -3,6 +3,7 @@ import { MdDashboard, MdWarehouse, MdLocalShipping, MdGroup, MdCalendarToday, Md
 import { useNavigate, Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import './Home.css';
+import '../styles/admin-modal.css';
 
 // IMPORTS
 import logo from '../assets/logo.png';
@@ -72,7 +73,24 @@ export default function Home() {
     const loggedInUser = localStorage.getItem('user');
     if (!loggedInUser) navigate('/login');
     else {
-      setUser(JSON.parse(loggedInUser));
+      const parsedUser = JSON.parse(loggedInUser);
+      setUser(parsedUser);
+      
+      // Fetch latest profile to ensure avatar is up to date
+      const uId = parsedUser.id || localStorage.getItem('user_id');
+      if (uId) {
+        fetch(`http://localhost/backend/auth/profile.php?id=${uId}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.data) {
+              const updatedUser = { ...parsedUser, ...data.data };
+              setUser(updatedUser);
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+          })
+          .catch(err => console.error("Profile fetch error:", err));
+      }
+
       loadViewData('dashboard');
     }
     const handleResize = () => {
@@ -447,47 +465,49 @@ export default function Home() {
           </div>
 
           {isProfileModalOpen && (
-              <div className="wms-modal-overlay" onClick={() => setIsProfileModalOpen(false)}>
-                  <div className="wms-modal-content wide-modal" onClick={(e) => e.stopPropagation()} style={{ padding: '0', overflow: 'hidden' }}>
-                      <div style={{ background: '#f8fafc', padding: '30px', textAlign: 'center', borderBottom: '1px solid #eee', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <h3 style={{ marginBottom: '20px', fontSize: '1.2rem', color: '#F37021', fontWeight: '900', letterSpacing: '3px' }}>ADMIN NODE</h3>
-                          <img src={logo} alt="Admin" style={{ maxWidth: '180px', height: 'auto', display: 'block' }} />
+                <div className="wms-modal-overlay" onClick={() => setIsProfileModalOpen(false)}>
+                  <div className="wms-modal-content wide-modal" onClick={(e) => e.stopPropagation()} style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+                    <div style={{ background: '#f8fafc', padding: '30px', textAlign: 'center', borderBottom: '1px solid #eee', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <h3 style={{ marginBottom: '20px', fontSize: '1.2rem', color: '#F37021', fontWeight: '900', letterSpacing: '3px' }}>ADMIN NODE</h3>
+                      <img src={logo} alt="Admin" style={{ maxWidth: '180px', height: 'auto', display: 'block' }} />
+                    </div>
+                    <div style={{ padding: '30px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                      <div className="wms-modal-table-wrapper">
+                        <table className="wms-modal-table">
+                          <thead>
+                            <tr><th>MANAGER</th><th style={{ textAlign: 'right' }}>STATUS</th></tr>
+                          </thead>
+                          <tbody>
+                            {usersList.map((u) => (
+                              <tr key={u.id} style={{ background: user && u.id === user.id ? '#fff3e0' : 'transparent' }}>
+                                <td>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <b>{u.username}</b>
+                                  {user && u.id === user.id && (
+                                  <span style={{ 
+                                    background: '#F37021', 
+                                    color: '#fff', 
+                                    padding: '2px 8px', 
+                                    borderRadius: '4px', 
+                                    fontSize: '0.7rem', 
+                                    fontWeight: '700',
+                                    letterSpacing: '0.5px'
+                                  }}>YOU</span>
+                                  )}
+                                </div>
+                                </td>
+                                <td style={{ textAlign: 'right' }}><span className="wms-status-badge">AUTHORIZED</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
-                      <div style={{ padding: '30px' }}>
-                          <div className="wms-modal-table-wrapper">
-                              <table className="wms-modal-table">
-                                  <thead>
-                                      <tr><th>MANAGER</th><th style={{ textAlign: 'right' }}>STATUS</th></tr>
-                                  </thead>
-                                  <tbody>
-                                      {usersList.map((u) => (
-                                          <tr key={u.id} style={{ background: user && u.id === user.id ? '#fff3e0' : 'transparent' }}>
-                                              <td>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                  <b>{u.username}</b>
-                                                  {user && u.id === user.id && (
-                                                    <span style={{ 
-                                                      background: '#F37021', 
-                                                      color: '#fff', 
-                                                      padding: '2px 8px', 
-                                                      borderRadius: '4px', 
-                                                      fontSize: '0.7rem', 
-                                                      fontWeight: '700',
-                                                      letterSpacing: '0.5px'
-                                                    }}>YOU</span>
-                                                  )}
-                                                </div>
-                                              </td>
-                                              <td style={{ textAlign: 'right' }}><span className="wms-status-badge">AUTHORIZED</span></td>
-                                          </tr>
-                                      ))}
-                                  </tbody>
-                              </table>
-                          </div>
-                      </div>
-                      <button className="wms-close-btn" onClick={() => setIsProfileModalOpen(false)}>CLOSE OVERVIEW</button>
+                    </div>
+                    <div style={{ padding: '20px', borderTop: '1px solid #eee', background: '#f8fafc' }}>
+                    <button className="wms-close-btn" onClick={() => setIsProfileModalOpen(false)} style={{ width: '100%' }}>CLOSE OVERVIEW</button>
+                    </div>
                   </div>
-              </div>
+                </div>
           )}
 
           <DetailModal 
@@ -900,11 +920,12 @@ export default function Home() {
               setIsUrgentBacklogOpen={setIsUrgentBacklogOpen}
               dashboardBacklogs={dashboardBacklogs}
               isDark={isDark}
+              setIsProfileModalOpen={setIsProfileModalOpen}
             />
           )}
 
           {currentView !== 'dashboard' && currentView !== 'backlog' && (
-            <div className="wms-card-grid wms-dashboard-cards">
+            <div className="wms-card-grid" style={{ maxWidth: '1200px', margin: '0 auto' }}>
               {currentView === 'drivers' && (
                 <DriverView 
                   filteredDataList={filteredDataList}

@@ -97,12 +97,15 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(18, 20, 23, 0.95);
+  background: rgba(18, 20, 23, 0.85);
   z-index: 5000;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+[data-theme="light"] .wms-loading-overlay {
+  background: rgba(249, 250, 251, 0.85);
 }
 .wms-loading-overlay-maincontent {
   position: fixed;
@@ -110,12 +113,15 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(18, 20, 23, 0.95);
+  background: rgba(18, 20, 23, 0.85);
   z-index: 3000;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+[data-theme="light"] .wms-loading-overlay-maincontent {
+  background: rgba(249, 250, 251, 0.85);
 }
 
 /* WAREHOUSE FORKLIFT LOADING ANIMATION */
@@ -197,6 +203,9 @@
   text-transform: uppercase;
   font-family: 'Bebas Neue', sans-serif;
   animation: textPulse 1.5s ease-in-out infinite;
+}
+[data-theme="light"] .wms-loading-text {
+  color: #1f2937;
 }
 
 @keyframes textPulse {
@@ -406,13 +415,20 @@
   --wms-border: #343A40;
 }
 
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
+}
+
 [data-theme="light"] {
   --wms-navy: #f3f4f6;
   --wms-slate: #fff;
   --wms-blue: #F37021;
   --wms-yellow: #FFB800;
   --wms-bg: #f9fafb;
-  --wms-content-bg: #ffffff;
+  --wms-content-bg: #f3f4f6;
   --wms-content-text: #1f2937;
   --wms-border: #343A40;
 }
@@ -514,21 +530,23 @@
 .wms-nav-item:hover { color: var(--wms-blue); background: rgba(0,0,0,0.1); }
 
 .wms-logout-box {
-  width: 44px;
-  height: 44px;
-  margin: 24px auto 24px auto;
+  width: 36px;
+  height: 36px;
+  margin: 12px auto;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #fff;
   color: #F37021;
-  border: 2.5px solid #F37021;
-  border-radius: 10px;
-  font-size: 1.5rem;
+  border: 2px solid #F37021;
+  border-radius: 6px;
+  font-size: 1.1rem;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border 0.2s;
   margin-top: auto;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  padding: 0;
+  flex-shrink: 0;
 }
 .wms-logout-box:hover, .wms-logout-box:focus {
   background: #F37021;
@@ -734,37 +752,47 @@
 /* CARDS GRID */
 .wms-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 25px;
-  max-width: 1100px;
+  grid-template-columns: repeat(5, 1fr);
+  justify-content: center;
+  gap: 15px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .wms-card-grid {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 800px;
+    gap: 12px;
+  }
 }
 
 @media (max-width: 768px) {
   .wms-card-grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
   }
 }
 
 @media (max-width: 480px) {
   .wms-card-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
   }
 }
 
 /* Fix single card alignment and width */
 .wms-card-grid:has(.wms-card:first-child:last-child) {
-  justify-items: start;
+  justify-content: start;
 }
 .wms-card-grid .wms-card:only-child {
-  max-width: 320px;
+  max-width: 360px;
   width: 100%;
 }
 
 /* Fix two cards alignment */
-.wms-card-grid:has(.wms-card:first-child:nth-last-child(2)) {
-  grid-template-columns: repeat(2, minmax(320px, 320px));
+.wms-card-grid:has(.wms-card:first-child:nth-last-child(2)),
+.wms-card-grid:has(.wms-card:first-child:nth-last-child(3)) {
   justify-content: start;
 }
 
@@ -1213,7 +1241,7 @@
   background: white;
   border-radius: 20px;
   width: 100%;
-  max-width: 420px;
+  max-width: 380px;
   min-width: 0;
   margin: 0 auto;
   box-sizing: border-box;
@@ -1221,10 +1249,13 @@
   display: block;
   overflow: hidden;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .wms-modal-content.wide-modal {
-  max-width: 500px;
+  max-width: 420px;
 }
 
 @media (max-width: 480px) {
@@ -1402,32 +1433,32 @@
 /* Dark Card Body */
 .wms-card-body-dark {
   background: #252525;
-  padding: 14px 18px;
+  padding: 10px 14px;
   color: #e5e7eb;
 }
 
 .wms-label-dark {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: #F37021;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 6px;
+  letter-spacing: 0.8px;
+  margin-bottom: 4px;
 }
 
 .wms-item-name-dark {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #e5e7eb;
-  margin: 0 0 4px 0;
-  line-height: 1.3;
+  margin: 0 0 3px 0;
+  line-height: 1.2;
 }
 
 /* Dark Card Footer */
 .wms-card-footer-dark {
   background: #1e1e1e;
-  padding: 12px 18px;
+  padding: 10px 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;

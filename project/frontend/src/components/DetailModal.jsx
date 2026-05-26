@@ -1,4 +1,5 @@
 import React from 'react';
+import defaultItemImg from '../assets/default_item.jpg';
 import { MdLocationCity, MdPerson, MdEdit, MdLocalShipping as MdTruck } from 'react-icons/md';
 
 export default function DetailModal({
@@ -19,23 +20,30 @@ export default function DetailModal({
   if (!isOpen || !selectedItem) return null;
 
   return (
-    <div className="wms-modal-overlay" onClick={onClose}>
-      <div className="wms-modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: '0', overflow: 'hidden', background: isDark ? '#fff' : '#9ca3af', width: currentView === 'shipments' ? '420px' : '480px', maxWidth: '90vw' }}>
-        <div style={{ background: isDark ? '#111827' : '#6b7280', padding: '40px', textAlign: 'center' }}>
+    <div className="wms-modal-overlay" onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div className="wms-modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: '0', overflow: 'hidden', background: isDark ? '#fff' : '#9ca3af', width: currentView === 'shipments' ? '420px' : '480px', maxWidth: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ background: isDark ? '#111827' : '#6b7280', padding: '20px', textAlign: 'center', flexShrink: 0 }}>
           {currentView === 'warehouses' ? (
-            <MdLocationCity style={{ fontSize: '80px', color: '#fff' }} />
+            <MdLocationCity style={{ fontSize: '50px', color: '#fff' }} />
           ) : currentView === 'drivers' ? (
-            <MdPerson style={{ fontSize: '80px', color: '#fff' }} />
+            <MdPerson style={{ fontSize: '50px', color: '#fff' }} />
           ) : (
-            <MdTruck style={{ fontSize: '80px', color: '#fff' }} />
+            <MdTruck style={{ fontSize: '50px', color: '#fff' }} />
           )}
         </div>
-        <div style={{ padding: '30px 20px', textAlign: 'center' }}>
-          <span style={{ fontSize: '0.7rem', color: isDark ? '#F37021' : '#1f2937', fontWeight: '800', display: 'block', marginBottom: '10px' }}>
+        <div style={{ padding: '20px', textAlign: 'center', flex: 1, overflowY: 'auto' }}>
+          <span style={{ fontSize: '0.7rem', color: isDark ? '#F37021' : '#1f2937', fontWeight: '800', display: 'block', marginBottom: '8px' }}>
             RECORD #00{(currentView === 'warehouses' ? selectedItem.id : (selectedItem.warehouse_id || selectedItem.id)).toString().padStart(2, '0')}
           </span>
-          <h2 style={{ margin: '10px 0 20px 0', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', maxWidth: '100%', padding: '0 10px' }}>
-            {currentView === 'shipments' ? selectedItem.item_name : selectedItem.name}
+          <h2 style={{ margin: '8px 0 15px 0', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', maxWidth: '100%', padding: '0 10px', fontSize: '1.2rem', lineHeight: '1.3', minHeight: 'auto' }}>
+              {currentView === 'shipments' ? (
+                <span style={{
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word',
+                  maxWidth: '100%',
+                  whiteSpace: 'pre-line',
+                }}>{selectedItem.item_name}</span>
+              ) : selectedItem.name}
           </h2>
 
           {/* Warehouse Details */}
@@ -55,6 +63,9 @@ export default function DetailModal({
                   </p>
                   <p style={{ margin: '5px 0', fontSize: '0.9rem' }}>
                     <span style={{ color: '#6b7280' }}>Contact:</span> {selectedItem.contact_no ? <span style={{ color: '#1f2937', fontWeight: '500' }}>{selectedItem.contact_no}</span> : <span style={{ color: '#ef4444', fontStyle: 'italic' }}>Pending Verification</span>}
+                  </p>
+                  <p style={{ margin: '5px 0', fontSize: '0.9rem' }}>
+                    <span style={{ color: '#6b7280' }}>License Number:</span> {selectedItem.license_number ? <span style={{ color: '#1f2937', fontWeight: '500' }}>{selectedItem.license_number}</span> : <span style={{ color: '#ef4444', fontStyle: 'italic' }}>Pending Verification</span>}
                   </p>
                   <p style={{ margin: '5px 0', fontSize: '0.9rem' }}>
                     <span style={{ color: '#6b7280' }}>License Expiry:</span> {selectedItem.license_expiry ? <span style={{ color: '#1f2937', fontWeight: '500' }}>{selectedItem.license_expiry}</span> : <span style={{ color: '#ef4444', fontStyle: 'italic' }}>Pending Verification</span>}
@@ -96,6 +107,7 @@ export default function DetailModal({
                 </>
               ) : (
                 <div style={{ marginTop: '15px' }}>
+                  {/* Driver Name and Status fields removed as requested */}
                   <div style={{ marginBottom: '15px' }}>
                     <label style={{ display: 'block', color: '#6b7280', fontSize: '0.85rem', fontWeight: '600', marginBottom: '6px' }}>Vehicle Type</label>
                     <input 
@@ -134,8 +146,12 @@ export default function DetailModal({
                     <input 
                       type="text" 
                       value={editedDriver.contact_no} 
-                      onChange={(e) => setEditedDriver({...editedDriver, contact_no: e.target.value})}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                        setEditedDriver({...editedDriver, contact_no: value});
+                      }}
                       placeholder="Enter contact number"
+                      maxLength="11"
                       style={{
                         width: '100%',
                         padding: '10px',
@@ -221,26 +237,30 @@ export default function DetailModal({
             <>
               {selectedItem.item_image && (
                 <div style={{
-                  marginBottom:'15px',
+                  marginBottom:'10px',
                   borderRadius:'4px',
                   overflow:'hidden',
                   border:'2px solid #343A40',
                   position:'relative',
-                  height:'220px'
+                  height:'140px',
+                  width:'100%'
                 }}>
                   <img 
-                    src={selectedItem.item_image !== 'default_item.jpg' 
+                    src={selectedItem.item_image && selectedItem.item_image !== 'default_item.jpg' 
                       ? `http://localhost/backend/uploads/${selectedItem.item_image}` 
-                      : 'http://localhost/backend/uploads/default_item.jpg'}
+                      : defaultItemImg}
                     alt={selectedItem.item_name}
                     style={{
-                      width:'100%',
-                      height:'100%',
-                      objectFit:'cover',
-                      objectPosition:'center'
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      objectPosition: 'center',
+                      display: 'block',
+                      background: '#fff',
                     }}
                     onError={(e) => {
-                      e.target.src = 'http://localhost/backend/uploads/default_item.jpg';
+                      e.target.onerror = null;
+                      e.target.src = defaultItemImg;
                     }}
                   />
                   <div style={{
@@ -275,12 +295,12 @@ export default function DetailModal({
               <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '5px 0', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', padding: '0 10px', textAlign: 'left' }}>Date of Shipment: {selectedItem.shipment_date || 'N/A'}</p>
               <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '5px 0', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', padding: '0 10px', textAlign: 'left' }}>Target Date: {selectedItem.target_date || 'Not Set'}</p>
               <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '5px 0', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', padding: '0 10px', textAlign: 'left' }}>Warehouse: {selectedItem.warehouse_name}</p>
-              <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '5px 0', wordWrap: 'break-word', wordBreak: 'break-word', overflowWrap: 'break-word', padding: '0 10px', textAlign: 'left' }}>Driver: {selectedItem.driver_name ? selectedItem.driver_name : 'Unassigned'}</p>
+                <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '5px 0', wordWrap: 'break-word', overflowWrap: 'break-word', maxWidth: '100%', textAlign: 'left' }}><b>Driver:</b> {selectedItem.driver_name ? selectedItem.driver_name : 'Unassigned'}</p>
               
               {/* Quick Status Update Buttons */}
-              <div style={{ marginTop: '25px', padding: '0 10px' }}>
-                <p style={{ color: '#9ca3af', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Quick Status Update</p>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div style={{ marginTop: '15px', padding: '0 10px' }}>
+                <p style={{ color: '#9ca3af', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>Quick Status Update</p>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
                   <button 
                     onClick={() => handleStatusUpdate('Pending')}
                     style={{
@@ -380,16 +400,16 @@ export default function DetailModal({
           )}
 
           {/* Footer Buttons */}
-          <div style={{ display: 'flex', gap: '10px', marginTop: '25px' }}>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
             {currentView === 'warehouses' ? (
               <>
-                <button onClick={onClose} style={{ flex: 1, padding: '15px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>CANCEL</button>
-                <button onClick={handleDeleteClick} style={{ flex: 1, padding: '15px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>DELETE RECORD</button>
+                <button onClick={onClose} style={{ flex: 1, padding: '12px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>CANCEL</button>
+                <button onClick={handleDeleteClick} style={{ flex: 1, padding: '12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>DELETE RECORD</button>
               </>
             ) : currentView === 'drivers' && !isEditingDriver ? (
-              <button onClick={onClose} style={{ width: '100%', padding: '15px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>CLOSE</button>
+              <button onClick={onClose} style={{ width: '100%', padding: '12px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>CLOSE</button>
             ) : currentView !== 'drivers' ? (
-              <button onClick={onClose} style={{ width: '100%', padding: '15px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>CLOSE</button>
+              <button onClick={onClose} style={{ width: '100%', padding: '12px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>CLOSE</button>
             ) : null}
           </div>
         </div>

@@ -14,15 +14,16 @@ export default function DashboardHome({
   isUrgentBacklogOpen,
   setIsUrgentBacklogOpen,
   dashboardBacklogs,
-  isDark
+  isDark,
+  setIsProfileModalOpen
 }) {
   return (
     <>
       {/* 1. STAT CARDS */}
       <div className="wms-card-grid wms-dashboard-cards">
-        <div className="wms-card">
+        <div className="wms-card wms-card-clickable" onClick={() => setIsProfileModalOpen(true)}>
           <div className="wms-card-top accent"><span className="wms-label">USERS</span><h2 className="wms-value">{stats.users} Managers</h2></div>
-          <div className="wms-card-bottom">Active Access</div>
+          <div className="wms-card-bottom">Active Access <span style={{color: 'var(--wms-blue)', fontWeight: 'bold'}}>View ❯</span></div>
         </div>
         <div className="wms-card wms-card-clickable" onClick={() => loadViewData('warehouses')}>
           <div className="wms-card-top"><span className="wms-label">LOGISTICS</span><h2 className="wms-value">{stats.warehouses} Warehouses</h2></div>

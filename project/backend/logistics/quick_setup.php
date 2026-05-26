@@ -8,6 +8,7 @@ header('Content-Type: application/json');
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { exit; }
 
 require_once '../db.php';
+require_once '../encryption_helper.php';
 
 $warehouseName = $_POST['warehouseName'] ?? null;
 
@@ -23,17 +24,16 @@ try {
     $stmtW = $pdo->prepare("INSERT INTO warehouses (name, location) VALUES (?, ?)");
     $stmtW->execute([$warehouseName, $_POST['location'] ?? '']);
     $warehouseId = $pdo->lastInsertId();
-
     // 2. Insert Driver
-    $stmtD = $pdo->prepare("INSERT INTO drivers (name, license_number, vehicle_type, contact_no, license_expiry, warehouse_id) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmtD->execute([
-        $_POST['driverName'] ?? '',
-        $_POST['licenseNumber'] ?? '',
-        $_POST['vehicleType'] ?? '',
-        $_POST['contact_no'] ?? '', 
-        $_POST['licenseExpiry'] ?? null,
-        $warehouseId 
-    ]);
+        $stmtD = $pdo->prepare("INSERT INTO drivers (name, license_number, vehicle_type, contact_no, license_expiry, warehouse_id, status) VALUES (?, ?, ?, ?, ?, ?, 'Available')");
+        $stmtD->execute([
+            $_POST['driverName'] ?? '',
+            encryptField($_POST['licenseNumber'] ?? ''), // <--- ENCRYPTED
+            $_POST['vehicleType'] ?? '',
+            encryptField($_POST['contactNumber'] ?? ''), // <--- ENCRYPTED (I-check kung contactNumber o contact_no ang gamit sa React)
+            $_POST['licenseExpiry'] ?? null,
+            $warehouseId
+        ]);
     $driverId = $pdo->lastInsertId();
 
     // --- FILE UPLOAD LOGIC ---

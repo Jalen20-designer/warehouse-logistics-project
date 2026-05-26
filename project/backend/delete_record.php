@@ -43,11 +43,11 @@ try {
             $stmtGetWH->execute([$id]);
             $warehouseIds = $stmtGetWH->fetchAll(PDO::FETCH_COLUMN);
 
-            // Delete lahat ng shipments na nakakabit sa driver na ito
+            // Delete the shipments linked to this driver
             $stmtShipments = $pdo->prepare("DELETE FROM shipments WHERE driver_id = ?");
             $stmtShipments->execute([$id]);
 
-            // Delete yung mga warehouse na nakarehistro dun sa sa tinanggal na shipments
+            // Delete the warehouses linked to this driver, ignoring if there are no associated warehouses
             if (!empty($warehouseIds)) {
                 $placeholders = implode(',', array_fill(0, count($warehouseIds), '?'));
                 $stmtWarehouses = $pdo->prepare("DELETE FROM warehouses WHERE id IN ($placeholders)");

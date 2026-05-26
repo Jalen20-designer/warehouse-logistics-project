@@ -3,10 +3,16 @@ import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import './Landing.css';
 import logo from '../assets/logo.png';
+import warehouseImg1 from '../assets/warehouseimg.jpg';
+import warehouseImg2 from '../assets/warehouseimg2.jpg';
+import warehouseImg3 from '../assets/warehouseimg3.jpg';
 
 export default function Landing() {
   const { isDark } = useTheme();
   const [loading, setLoading] = useState(true);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const images = [warehouseImg1, warehouseImg2, warehouseImg3];
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -14,6 +20,15 @@ export default function Landing() {
     }, 3000);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [loading, images.length]);
 
   const logoStyle = {
     maxWidth: '250px',
@@ -49,14 +64,52 @@ export default function Landing() {
           <p style={{ marginTop: '1.5rem', color: '#9ca3af', fontFamily: 'Bebas Neue, sans-serif', letterSpacing: '2px', fontSize: '1.2rem' }}>LOADING SYSTEM...</p>
         </div>
       ) : (
-        <div className="landing-container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Roboto Condensed, sans-serif', background: '#121417' }}>
+        <div 
+          className="landing-container" 
+          style={{ 
+            minHeight: '100vh', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            fontFamily: 'Roboto Condensed, sans-serif',
+            backgroundImage: `url(${images[currentImageIndex]})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed',
+            transition: 'background-image 1s ease-in-out',
+            position: 'relative'
+          }}
+        >
           <style>{`
             @keyframes logoBubble {
               0%, 100% { transform: translateY(0px) scale(1); }
               50% { transform: translateY(-10px) scale(1.05); }
             }
           `}</style>
-          <div className="landing-card" style={{ width: '100%', maxWidth: '500px', textAlign: 'center', background: '#1E2126', padding: '3rem 2rem', borderRadius: '4px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', border: '2px solid #343A40', position: 'relative' }}>
+          
+          {/* Dark overlay for better readability */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            zIndex: 1
+          }}></div>
+
+          <div className="landing-card" style={{ 
+            width: '100%', 
+            maxWidth: '500px', 
+            textAlign: 'center', 
+            background: '#1E2126', 
+            padding: '3rem 2rem', 
+            borderRadius: '4px', 
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)', 
+            border: '2px solid #343A40', 
+            position: 'relative',
+            zIndex: 2
+          }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'repeating-linear-gradient(45deg, #000, #000 8px, #FFB800 8px, #FFB800 16px)' }}></div>
             <img src={logo} alt="Warehouse LMS" style={logoStyle} />
             <div style={{ color: '#9ca3af', marginBottom: '2.5rem', lineHeight: '1.6', fontSize: '1rem' }}>
@@ -75,6 +128,8 @@ export default function Landing() {
                 SYSTEM VERSION GROUP 3 - SECURE MANAGER PORTAL
             </p>
           </div>
+
+
         </div>
       )}
     </>

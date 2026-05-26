@@ -21,25 +21,41 @@ export default function Sidebar({
     <aside className={`wms-sidebar${isSidebarOpen ? ' mobile-open' : ' closed'}`}>
       <div 
         className="wms-sidebar-profile wms-sidebar-profile-clickable" 
-        onClick={() => setIsProfileModalOpen(true)} 
+        onClick={() => navigate('/profile')} 
         style={{ cursor: 'pointer' }}
       >
         <div className="wms-profile-circle-big" style={{ 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #F37021 0%, #C85A1A 100%)',
+          background: user?.avatar ? 'transparent' : 'linear-gradient(135deg, #F37021 0%, #C85A1A 100%)',
           borderRadius: '50%',
-          boxShadow: '0 4px 15px rgba(243, 112, 33, 0.4)'
+          boxShadow: user?.avatar ? 'none' : '0 4px 15px rgba(243, 112, 33, 0.4)',
+          overflow: 'hidden',
+          width: '110px',
+          height: '110px',
+          margin: '0 auto'
         }}>
-          <MdAdminPanelSettings style={{ fontSize: '3.2rem', color: '#fff' }} />
+          {user?.avatar ? (
+            <img 
+              src={`http://localhost/backend/uploads/profiles/${user.avatar}`} 
+              alt="Profile" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+            />
+          ) : user?.username ? (
+            <span style={{ fontSize: '4.5rem', color: '#fff', fontWeight: 'bold' }}>
+              {user.username.charAt(0).toUpperCase()}
+            </span>
+          ) : (
+            <MdAdminPanelSettings style={{ fontSize: '4.5rem', color: '#fff' }} />
+          )}
         </div>
         
-        <h4 className="wms-profile-name">
+        <h4 className="wms-profile-name" style={{ fontSize: '1.4rem', marginTop: '15px', letterSpacing: '1px', fontWeight: 'bold' }}>
           {user?.username || 'ADMIN'}
         </h4>
-        <p className="wms-profile-role">
-          Hello {(user?.username?.split(' ')[0] || 'Admin').toUpperCase()}
+        <p className="wms-profile-role" style={{ fontSize: '1rem', color: '#a1a1aa', marginTop: '5px' }}>
+          WELCOME {(user?.username?.split(' ')[0] || 'Admin').toUpperCase()}
         </p>
       </div>
 
@@ -65,7 +81,7 @@ export default function Sidebar({
       </nav>
 
       <button className="wms-logout-box" onClick={() => setShowLogoutModal(true)} title="Logout">
-        <MdLogout className="wms-nav-icon" style={{ fontSize: '1.5em', margin: 0 }} />
+        <MdLogout />
       </button>
 
       {showLogoutModal && (
@@ -77,7 +93,7 @@ export default function Sidebar({
               <button 
                 className="wms-logout-modal-btn" 
                 style={{ background: '#dc2626', color: '#fff' }} 
-                onClick={() => { localStorage.clear(); navigate('/login'); }} 
+                onClick={() => { localStorage.clear(); navigate('/'); }} 
               >
                 OK
               </button>

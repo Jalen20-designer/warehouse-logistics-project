@@ -1,9 +1,29 @@
 import '../pages/Home.css';
 import React, { useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import { MdClose, MdUpload, MdImage, MdWarehouse, MdPerson, MdLocalShipping } from 'react-icons/md';
 
 const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
+  const { isDark } = useTheme();
   if (!isOpen) return null;
+
+  // Add CSS animations on component mount
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
+    `;
+    if (!document.head.querySelector('style[data-quick-setup]')) {
+      style.setAttribute('data-quick-setup', 'true');
+      document.head.appendChild(style);
+    }
+  }, []);
 
   const [formData, setFormData] = useState({
     warehouseName: '',
@@ -21,7 +41,9 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
 
   const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [processingStep, setProcessingStep] = useState('');
 
   const vehicleTypes = [
     'Motorcycle / Scooter',
@@ -38,10 +60,26 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (name === 'contactNumber') {
+      // Only allow numbers and limit to 11 digits
+      const numericValue = value.replace(/[^0-9]/g, '').slice(0, 11);
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }));
+    } else if (name === 'licenseNumber') {
+      // Only allow numbers for license number
+      const numericValue = value.replace(/[^0-9]/g, '');
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleFileChange = (e) => {
@@ -88,14 +126,27 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
       'quantity', 'shipment_date'
     ];
     
+
+
     for (const field of requiredFields) {
       if (!formData[field] || formData[field].toString().trim() === '') {
-        alert(`Please fill in all required fields. Missing: ${field}`);
+        setErrorMsg(`Please fill in all required fields. Missing: ${field}`);
+        return;
+      }
+    }
+
+    // Validate license expiry year is present year or later
+    if (formData.licenseExpiry) {
+      const selectedYear = new Date(formData.licenseExpiry).getFullYear();
+      const currentYear = new Date().getFullYear();
+      if (selectedYear < currentYear) {
+        setErrorMsg('License expiry year must be this year or later.');
         return;
       }
     }
 
     setIsSubmitting(true);
+    setProcessingStep('Validating data...');
 
     try {
       // Create FormData object for file upload
@@ -137,16 +188,19 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
       
       // Send POST request - CRUCIAL: DO NOT set Content-Type header
       // Browser will automatically set multipart/form-data with boundary
+      setProcessingStep('Creating warehouse...');
       const response = await fetch('http://localhost/backend/logistics/quick_setup.php', {
         method: 'POST',
         body: submitData
         // NO headers property - let browser handle Content-Type
       });
 
+      setProcessingStep('Processing response...');
       const data = await response.json();
 
       if (data.success) {
         // Show success message
+        setProcessingStep('Setup completed!');
         setShowSuccess(true);
         
         // Reset form
@@ -172,11 +226,12 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
         // Call success callback
         if (onSuccess) onSuccess();
         
-        // Close modal after 2 seconds
+        // Close modal after 2.5 seconds
         setTimeout(() => {
           setShowSuccess(false);
+          setProcessingStep('');
           onClose();
-        }, 2000);
+        }, 2500);
       } else {
         console.error('Backend error:', data.message);
         alert(`Error: ${data.message || 'Quick setup failed'}`);
@@ -186,11 +241,71 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
       alert(`Request failed: ${error.message}`);
     } finally {
       setIsSubmitting(false);
+      setProcessingStep('');
     }
   };
 
   return (
     <div className="wms-modal-overlay" onClick={onClose}>
+      {/* Processing Loading Overlay */}
+      {isSubmitting && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: '#1f2937',
+            padding: '40px',
+            borderRadius: '12px',
+            textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+            border: '1px solid #374151'
+          }}>
+            {/* Spinner */}
+            <div style={{
+              width: '60px',
+              height: '60px',
+              margin: '0 auto 20px',
+              border: '4px solid #374151',
+              borderTop: '4px solid #F37021',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }}></div>
+            
+            {/* Processing Text */}
+            <p style={{
+              color: '#e5e7eb',
+              fontSize: '1.1rem',
+              fontWeight: '600',
+              margin: '0 0 10px 0',
+              letterSpacing: '0.5px'
+            }}>
+              {processingStep || 'Processing...'}
+            </p>
+            
+            {/* Animated dots */}
+            <p style={{
+              color: '#9ca3af',
+              fontSize: '1.5rem',
+              margin: 0,
+              letterSpacing: '4px',
+              animation: 'pulse 1.5s ease-in-out infinite'
+            }}>
+              ●●●
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Success Alert */}
       {showSuccess && (
         <div className="fixed top-5 left-1/2 transform -translate-x-1/2 z-[60] bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg font-bold">
@@ -198,7 +313,35 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
         </div>
       )}
       
-      <div className="setup-modal-content wms-modal-content" onClick={e => e.stopPropagation()} style={{maxWidth:600,minWidth:400,background:'#2a2a2a',color:'#fff',padding:0,maxHeight:'90vh',overflowY:'auto',position:'relative'}}>
+      <div
+        className="setup-modal-content wms-modal-content"
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '90vw',
+          maxWidth: 600,
+          minWidth: 'min(350px, 98vw)',
+          background: isDark ? '#2a2a2a' : '#fff',
+          color: isDark ? '#fff' : '#222',
+          padding: 0,
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          position: 'relative',
+          opacity: isSubmitting ? 0.5 : 1,
+          pointerEvents: isSubmitting ? 'none' : 'auto',
+          transition: 'all 0.3s ease',
+          boxShadow: isDark
+            ? '0 8px 32px rgba(0,0,0,0.7)'
+            : '0 8px 32px rgba(0,0,0,0.12)'
+        }}
+      >
+      {/* Responsive style for modal padding */}
+      <style>{`
+        @media (max-width: 600px) {
+          .setup-modal-content.wms-modal-content .setup-form-body {
+            padding: 16px !important;
+          }
+        }
+      `}</style>
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -230,18 +373,80 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
         </button>
 
         {/* Header */}
-        <div className="setup-modal-header" style={{background:'#111827',padding:'24px 32px',borderBottom:'1px solid #eee'}}>
-          <h2 style={{margin:0,fontSize:'1.5em',fontWeight:800,letterSpacing:1,color:'#fff'}}>Quick Setup</h2>
-          <p style={{margin:'8px 0 0 0',color:'#9ca3af',fontSize:'0.9em'}}>Fill out this form to setup your nodes.</p>
+        <div
+          className="setup-modal-header"
+          style={{
+            background: isDark ? '#111827' : '#f3f4f6',
+            padding: '24px 32px',
+            borderBottom: isDark ? '1px solid #222' : '1px solid #eee'
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontSize: '1.5em',
+              fontWeight: 800,
+              letterSpacing: 1,
+              color: isDark ? '#fff' : '#222'
+            }}
+          >
+            Quick Setup
+          </h2>
+          <p
+            style={{
+              margin: '8px 0 0 0',
+              color: isDark ? '#9ca3af' : '#555',
+              fontSize: '0.9em'
+            }}
+          >
+            Fill out this form to setup your nodes.
+          </p>
         </div>
 
         {/* Form */}
+        {errorMsg && (
+          <div style={{
+            background: '#fee2e2',
+            color: '#b91c1c',
+            border: '1px solid #fca5a5',
+            borderRadius: '8px',
+            padding: '12px 18px',
+            marginBottom: '18px',
+            fontWeight: 600,
+            textAlign: 'center',
+            fontSize: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            justifyContent: 'center',
+            position: 'relative'
+          }}>
+            <span style={{fontSize:'1.3em'}}>⚠️</span>
+            <span>{errorMsg}</span>
+            <button type="button" onClick={()=>setErrorMsg('')} style={{position:'absolute',right:12,top:8,background:'none',border:'none',color:'#b91c1c',fontWeight:'bold',fontSize:'1.2em',cursor:'pointer'}}>×</button>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="setup-form-body" style={{padding:'32px'}}>
           {/* Warehouse Section */}
           <div className="form-group" style={{marginBottom:'15px'}}>
             <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Warehouse Name <span style={{color:'red'}}></span></label>
             <input
               className="wms-search-input"
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                border: '2px solid #111',
+                borderRadius: '6px',
+                outline: 'none',
+                background: isDark ? '#23272f' : '#fff',
+                color: isDark ? '#fff' : '#222',
+                fontSize: '1em',
+                marginBottom: '10px',
+                boxSizing: 'border-box',
+                transition: 'border-color 0.2s',
+              }}
+              onFocus={e => e.target.style.borderColor = '#F37021'}
+              onBlur={e => e.target.style.borderColor = '#111'}
               type="text"
               name="warehouseName"
               value={formData.warehouseName}
@@ -292,6 +497,8 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
                 onChange={handleInputChange}
                 placeholder="License number"
                 style={{width:'100%',marginBottom:'10px'}}
+                inputMode="numeric"
+                pattern="[0-9]*"
                 required
               />
             </div>
@@ -325,8 +532,11 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
                 name="contactNumber"
                 value={formData.contactNumber}
                 onChange={handleInputChange}
-                placeholder="Contact number"
+                placeholder="09XX XXX XXXX"
                 style={{width:'100%',marginBottom:'10px'}}
+                maxLength={11}
+                pattern="[0-9]{11}"
+                inputMode="numeric"
                 required
               />
             </div>
@@ -374,30 +584,33 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
               <label
                 htmlFor="item-image-input"
                 style={{
-                  display:'flex',
-                  alignItems:'center',
-                  justifyContent:'center',
-                  gap:'10px',
-                  width:'100%',
-                  padding:'12px',
-                  background:'#121417',
-                  border:'2px solid #343A40',
-                  borderRadius:'4px',
-                  color:'#9ca3af',
-                  cursor:'pointer',
-                  transition:'all 0.3s ease',
-                  fontSize:'0.9rem'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  width: '100%',
+                  padding: '12px',
+                  background: isDark ? '#121417' : '#f3f4f6',
+                  border: isDark ? '2px solid #343A40' : '2px solid #d1d5db',
+                  borderRadius: '4px',
+                  color: isDark ? '#9ca3af' : '#222',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  fontSize: '0.9rem',
+                  fontWeight: 500
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = '#F37021';
                   e.currentTarget.style.color = '#F37021';
+                  e.currentTarget.style.background = isDark ? '#23272f' : '#e5e7eb';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#343A40';
-                  e.currentTarget.style.color = '#9ca3af';
+                  e.currentTarget.style.borderColor = isDark ? '#343A40' : '#d1d5db';
+                  e.currentTarget.style.color = isDark ? '#9ca3af' : '#222';
+                  e.currentTarget.style.background = isDark ? '#121417' : '#f3f4f6';
                 }}
               >
-                <MdUpload style={{fontSize:'1.5rem'}} />
+                <MdUpload style={{ fontSize: '1.5rem', color: isDark ? '#9ca3af' : '#222' }} />
                 <span>{formData.item_image ? 'Change Image' : 'Upload Image'}</span>
               </label>
               {formData.item_image && (
@@ -441,9 +654,9 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
           <button
             type="submit"
             disabled={isSubmitting}
-            style={{width:'100%',padding:'15px',background:'#F37021',color:'#fff',border:'none',borderRadius:4,fontWeight:'bold',fontSize:'1.1em',cursor:'pointer',letterSpacing:1,boxShadow:'0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)',textTransform:'uppercase',transition:'all 0.2s'}}
+            style={{width:'100%',padding:'15px',background: isSubmitting ? '#9ca3af' : '#F37021',color:'#fff',border:'none',borderRadius:4,fontWeight:'bold',fontSize:'1.1em',cursor: isSubmitting ? 'not-allowed' : 'pointer',letterSpacing:1,boxShadow: isSubmitting ? 'none' : '0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)',textTransform:'uppercase',transition:'all 0.2s'}}
           >
-            {isSubmitting ? 'ACTIVATING SETUP...' : 'ACTIVATE SETUP'}
+            {isSubmitting ? 'PROCESSING...' : 'ACTIVATE SETUP'}
           </button>
         </form>
       </div>

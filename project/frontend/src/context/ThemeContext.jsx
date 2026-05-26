@@ -18,7 +18,14 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    document.documentElement.classList.add('theme-transition');
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    
+    const timer = setTimeout(() => {
+      document.documentElement.classList.remove('theme-transition');
+    }, 300);
+    
+    return () => clearTimeout(timer);
   }, [isDark]);
 
   const toggleTheme = () => setIsDark(prev => !prev);
