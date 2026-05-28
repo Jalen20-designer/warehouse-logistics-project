@@ -6,16 +6,17 @@ import './Home.css';
 import '../styles/admin-modal.css';
 
 // IMPORTS
+import { decryptFieldInReact } from '../utils/cryptoHelper';
 import logo from '../assets/logo.png';
 import Backlog from '../components/Backlog';
 import QuickSetupModal from '../components/QuickSetupModal';
 import Sidebar from '../components/Sidebar';
 import TopHeader from '../components/TopHeader';
-import WarehouseView from '../components/WarehouseView';
-import DriverView from '../components/DriverView';
-import ShipmentView from '../components/ShipmentView';
+import WarehouseView from '../features/Warehouse/WarehouseView';
+import DriverView from '../features/Drivers/DriverView';
+import ShipmentView from '../features/Shipments/ShipmentView';
 import AboutView from '../components/AboutView';
-import DashboardHome from '../components/DashboardHome';
+import DashboardHome from '../features/Dashboard/DashboardHome';
 import DetailModal from '../components/DetailModal';
 
 export default function Home() {
@@ -75,21 +76,21 @@ export default function Home() {
     else {
       const parsedUser = JSON.parse(loggedInUser);
       setUser(parsedUser);
-      
-      // Fetch latest profile to ensure avatar is up to date
-      const uId = parsedUser.id || localStorage.getItem('user_id');
-      if (uId) {
-        fetch(`http://localhost/backend/auth/profile.php?id=${uId}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.success && data.data) {
-              const updatedUser = { ...parsedUser, ...data.data };
-              setUser(updatedUser);
-              localStorage.setItem('user', JSON.stringify(updatedUser));
-            }
-          })
-          .catch(err => console.error("Profile fetch error:", err));
-      }
+
+      // RESTful: GET /auth/profile with credentials
+      fetch('http://localhost/backend/auth/profile', {
+        method: 'GET',
+        credentials: 'include'
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data) {
+            const updatedUser = { ...parsedUser, ...data.data };
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+        })
+        .catch(err => console.error("Profile fetch error:", err));
 
       loadViewData('dashboard');
     }
@@ -112,24 +113,32 @@ export default function Home() {
       return;
     }
 
-    // PATH MAPPING
-    let endpoint = "";
-    if (view === 'dashboard') {
-      endpoint = 'activities/get_dashboard_stats.php';
-    } else if (view === 'warehouses') {
-      endpoint = 'logistics/logistics_manager.php?action=list_warehouses';
-    } else if (view === 'shipments') {
-      endpoint = 'logistics/logistics_manager.php?action=list_shipments';
-    } else if (view === 'drivers') {
-      endpoint = 'logistics/logistics_manager.php?action=list_drivers';
-    }
-
     try {
-      // Construct URL with proper timestamp
-      const separator = endpoint.includes('?') ? '&' : '?';
-      const url = `http://localhost/backend/${endpoint}${separator}t=${new Date().getTime()}`;
-      const res = await fetch(url);
-      const data = await res.json();
+      let endpoint = 'http://localhost/backend';
+      let res;
+      if (view === 'dashboard') {
+        // GET /activities/stats
+        res = await fetch(`${endpoint}/activities/stats`, { method: 'GET', credentials: 'include' });
+      } else if (view === 'warehouses') {
+        // GET /warehouses
+        res = await fetch(`${endpoint}/warehouses`, { method: 'GET', credentials: 'include' });
+      } else if (view === 'shipments') {
+        // GET /shipments
+        res = await fetch(`${endpoint}/shipments`, { method: 'GET', credentials: 'include' });
+      } else if (view === 'drivers') {
+        // GET /drivers
+        res = await fetch(`${endpoint}/drivers`, { method: 'GET', credentials: 'include' });
+      }
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (jsonErr) {
+        console.error('Invalid JSON from backend:', text);
+        setNotif({ show: true, msg: 'Server error: Invalid JSON response', type: 'error' });
+        setTimeout(() => setLoading(false), 500);
+        return;
+      }
 
       if (data.success) {
         if (view === 'dashboard') {
@@ -144,15 +153,18 @@ export default function Home() {
           // Fetch extra Dashboard data
           setLoadingActivities(true);
           try {
-            const userRes = await fetch(`http://localhost/backend/auth/get_all_users.php?t=${new Date().getTime()}`);
+            // GET /auth/users (for managers list)
+            const userRes = await fetch('http://localhost/backend/auth/users', { method: 'GET', credentials: 'include' });
             const userData = await userRes.json();
-            if (userData.success) setUsersList(userData.users);
+            if (userData.success) setUsersList(userData.users || []);
 
-            const activityRes = await fetch(`http://localhost/backend/activities/activities_manager.php?action=list&t=${new Date().getTime()}`);
+            // GET /activities
+            const activityRes = await fetch('http://localhost/backend/activities', { method: 'GET', credentials: 'include' });
             const activityData = await activityRes.json();
             if (activityData.success) setActivitiesList(activityData.data || []);
 
-            const backlogRes = await fetch(`http://localhost/backend/backlog/backlog_manager.php?action=list&t=${new Date().getTime()}`);
+            // GET /backlog
+            const backlogRes = await fetch('http://localhost/backend/backlog', { method: 'GET', credentials: 'include' });
             const backlogData = await backlogRes.json();
             if (backlogData.success && backlogData.data) {
               const pending = backlogData.data.filter(t => t.status !== 'Shipped' && t.status !== 'Completed');
@@ -164,8 +176,20 @@ export default function Home() {
             setLoadingActivities(false);
           }
         } else {
-          // PARA SA SHIPMENTS, WAREHOUSES, DRIVERS
-          setDataList(data.data || []);
+          // For shipments, warehouses, drivers
+          if (view === 'drivers') {
+            // I-decrypt muna ang bawat driver bago i-save sa state
+            const decryptedDrivers = await Promise.all(data.data.map(async (driver) => {
+              return {
+                ...driver,
+                contact_no: await decryptFieldInReact(driver.contact_no),
+                license_number: await decryptFieldInReact(driver.license_number)
+              };
+            }));
+            setDataList(decryptedDrivers);
+          } else {
+            setDataList(data.data || []);
+          }
         }
       } else {
         console.error('Backend error:', data.message);
@@ -223,12 +247,11 @@ export default function Home() {
     if (!selectedItem || !selectedItem.id) return;
 
     try {
-      const res = await fetch(`http://localhost/backend/delete_record.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedItem.id, table: currentView })
+      // RESTful DELETE /{resource}/{id} with credentials
+      const res = await fetch(`http://localhost/backend/${currentView}/${selectedItem.id}`, {
+        method: 'DELETE',
+        credentials: 'include'
       });
-      
       const data = await res.json();
       if (data.success) {
         setIsConfirmOpen(false);
@@ -248,12 +271,13 @@ export default function Home() {
     if (!selectedItem || !selectedItem.id) return;
 
     try {
-      const res = await fetch(`http://localhost/backend/logistics/logistics_manager.php?action=update_shipment_status`, {
-        method: 'POST',
+      // RESTful PATCH /shipments/{id} with credentials
+      const res = await fetch(`http://localhost/backend/shipments/${selectedItem.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedItem.id, status: newStatus })
+        credentials: 'include',
+        body: JSON.stringify({ status: newStatus })
       });
-      
       const data = await res.json();
       if (data.success) {
         showNotif(`Status updated to ${newStatus}!`, 'success');
@@ -271,17 +295,17 @@ export default function Home() {
     if (!selectedItem || !selectedItem.id) return;
 
     try {
-      const res = await fetch(`http://localhost/backend/logistics/logistics_manager.php?action=update_driver_info`, {
-        method: 'POST',
+      // RESTful PATCH /drivers/{id} with credentials
+      const res = await fetch(`http://localhost/backend/drivers/${selectedItem.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ 
-          id: selectedItem.id, 
           contact_no: editedDriver.contact_no,
           vehicle_type: editedDriver.vehicle_type,
           license_expiry: editedDriver.license_expiry
         })
       });
-      
       const data = await res.json();
       if (data.success) {
         showNotif('Driver information updated successfully!', 'success');
@@ -308,12 +332,11 @@ export default function Home() {
     }
 
     try {
-      const res = await fetch(`http://localhost/backend/activities/activities_manager.php?action=delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: activityId })
+      // RESTful DELETE /activities/{id} with credentials
+      const res = await fetch(`http://localhost/backend/activities/${activityId}`, {
+        method: 'DELETE',
+        credentials: 'include'
       });
-      
       const data = await res.json();
       console.log('Delete response:', data); // Debug log
       
@@ -347,11 +370,11 @@ export default function Home() {
 
   const handleDeleteAllActivities = async () => {
     try {
-      const res = await fetch(`http://localhost/backend/activities/delete_all_activities.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+      // RESTful DELETE /activities (delete all) with credentials
+      const res = await fetch('http://localhost/backend/activities', {
+        method: 'DELETE',
+        credentials: 'include'
       });
-      
       const data = await res.json();
       
       if (data.success) {
@@ -478,7 +501,7 @@ export default function Home() {
                             <tr><th>MANAGER</th><th style={{ textAlign: 'right' }}>STATUS</th></tr>
                           </thead>
                           <tbody>
-                            {usersList.map((u) => (
+                            {(usersList || []).map((u) => (
                               <tr key={u.id} style={{ background: user && u.id === user.id ? '#fff3e0' : 'transparent' }}>
                                 <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -963,15 +986,21 @@ export default function Home() {
           {currentView === 'backlog' && (
             <Backlog isDark={isDark} onTaskUpdate={() => {
                 if (window.location.pathname === '/') {
-                  // Re-fetch dashboard data in the background silently
+                  // Re-fetch dashboard data in the background silently (RESTful, GET, credentials)
                   const loadDashboardSilently = async () => {
                     try {
-                      const activityRes = await fetch(`http://localhost/backend/activities/activities_manager.php?t=${new Date().getTime()}`);
+                      const activityRes = await fetch('http://localhost/backend/activities', {
+                        method: 'GET',
+                        credentials: 'include'
+                      });
                       const activityData = await activityRes.json();
                       if (activityData.success && activityData.data) {
                         setActivitiesList(activityData.data);
                       }
-                      const backlogRes = await fetch(`http://localhost/backend/backlog/backlog_manager.php?action=list&t=${new Date().getTime()}`);
+                      const backlogRes = await fetch('http://localhost/backend/backlog', {
+                        method: 'GET',
+                        credentials: 'include'
+                      });
                       const backlogData = await backlogRes.json();
                       if (backlogData.success && backlogData.data) {
                         const PRIORITY_ORDER = { 'High': 1, 'Medium': 2, 'Low': 3 };

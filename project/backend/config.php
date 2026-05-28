@@ -1,5 +1,3 @@
 <?php
-// Secret master key (32 characters)
-define('ENCRYPTION_KEY', 'Wms_Logistics_Group3_Secret_Key!'); 
+define('ENCRYPTION_KEY', hex2bin('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'));
 define('CIPHER_METHOD', 'aes-256-gcm');
-?>

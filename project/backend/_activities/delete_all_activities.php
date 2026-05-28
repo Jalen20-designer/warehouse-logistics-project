@@ -1,21 +1,12 @@
 <?php
-// backend/activities/delete_all_activities.php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: http://localhost:3000');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+// backend/_activities/delete_all_activities.php
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+// TINAWANAN at tinanggal na natin ang CORS headers at db require dito
+// dahil awtomatikong pinapagana na ito ng iyong api.php (Router) sa pinakataas.
 
-// Siguraduhin na tama ang path papunta sa db.php mo (labas ng isang folder)
-require_once '../db.php'; 
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     try {
-        // Direkta nating gagamitin ang $pdo variable na galing sa db.php
+        // Direkta nating gagamitin ang $pdo variable na galing sa api.php / db.php
         $query = "DELETE FROM activities";
         $stmt = $pdo->prepare($query);
         
@@ -38,9 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
     }
 } else {
+    // Kapag hindi DELETE request ang dumating
+    http_response_code(405);
     echo json_encode([
         'success' => false,
-        'message' => 'Invalid request method. POST required.'
+        'message' => 'Invalid request method. DELETE required.'
     ]);
 }
 ?>

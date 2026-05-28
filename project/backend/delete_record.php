@@ -1,17 +1,23 @@
 <?php
-header('Access-Control-Allow-Origin: http://localhost:3000');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Content-Type: application/json');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { exit; }
+// backend/delete_record.php
+// TANGGALIN ang duplicate CORS headers dahil nandun na ito sa api.php
 
 $host = "localhost"; $dbname = "warehouse_db"; $username = "root"; $password = "";
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    // Subukang basahin ang JSON body
     $data = json_decode(file_get_contents("php://input"), true);
+
+    // FALLBACK: Kung walang JSON body (RESTful DELETE), kunin ang data mula sa Router variables ($id at $resource)
+    if (!$data) {
+        $data = [
+            'id' => $id ?? null,
+            'table' => $resource ?? null
+        ];
+    }
 
     if (isset($data['id']) && isset($data['table'])) {
         $id = $data['id'];
@@ -24,30 +30,23 @@ try {
             exit;
         }
 
-        // --- CASCADE DELETION LOGIC ---
+        // --- CASCADE DELETION LOGIC (Hayaang buo ang logic mo rito) ---
         if ($table === 'warehouses') {
-            // First, delete all shipments linked to this warehouse
             $stmtShipments = $pdo->prepare("DELETE FROM shipments WHERE warehouse_id = ?");
             $stmtShipments->execute([$id]);
 
-            // Attempt to delete related drivers if the foreign key exists, ignoring column errors
             try {
                 $stmtDrivers = $pdo->prepare("DELETE FROM drivers WHERE warehouse_id = ?");
                 $stmtDrivers->execute([$id]);
-            } catch (PDOException $e) {
-                // Silently ignore if 'warehouse_id' doesn't exist in the drivers table
-            }
+            } catch (PDOException $e) {}
         } elseif ($table === 'drivers') {
-            // Hanapin ang mga associated warehouse IDs bago i-delete ang shipments
             $stmtGetWH = $pdo->prepare("SELECT warehouse_id FROM shipments WHERE driver_id = ?");
             $stmtGetWH->execute([$id]);
             $warehouseIds = $stmtGetWH->fetchAll(PDO::FETCH_COLUMN);
 
-            // Delete the shipments linked to this driver
             $stmtShipments = $pdo->prepare("DELETE FROM shipments WHERE driver_id = ?");
             $stmtShipments->execute([$id]);
 
-            // Delete the warehouses linked to this driver, ignoring if there are no associated warehouses
             if (!empty($warehouseIds)) {
                 $placeholders = implode(',', array_fill(0, count($warehouseIds), '?'));
                 $stmtWarehouses = $pdo->prepare("DELETE FROM warehouses WHERE id IN ($placeholders)");

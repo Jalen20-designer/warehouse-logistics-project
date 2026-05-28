@@ -1,9 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Landing from './pages/Landing'
-import Register from './pages/Register'
-import Login from './pages/Login'
+import { Register, Login, Profile } from './features/Auth'
 import Home from './pages/Home'
-import Profile from './pages/Profile'
 import ProtectedRoute from './components/ProtectedRoute'
 import { ThemeProvider } from './context/ThemeContext'
 

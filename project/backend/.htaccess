@@ -1,0 +1,13 @@
+RewriteEngine On
+RewriteBase /backend/
+
+# 1. Pigilan ang Apache na i-redirect ang /auth papunta sa physical folder
+DirectorySlash Off
+Options -Indexes
+
+# 2. Huwag i-rewrite kung ito ay totoong file (halimbawa images sa uploads)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# 3. Ituro ang lahat ng "Clean URL" sa api.php
+RewriteRule ^(.*)$ api.php?route=$1 [QSA,L]

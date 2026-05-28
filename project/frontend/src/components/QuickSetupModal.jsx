@@ -1,29 +1,12 @@
 import '../pages/Home.css';
-import React, { useState } from 'react';
+import './QuickSetupModal.css';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { MdClose, MdUpload, MdImage, MdWarehouse, MdPerson, MdLocalShipping } from 'react-icons/md';
 
 const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
+  // ✅ ALL HOOKS AT THE TOP - BEFORE ANY CONDITIONAL LOGIC
   const { isDark } = useTheme();
-  if (!isOpen) return null;
-
-  // Add CSS animations on component mount
-  React.useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-      @keyframes pulse {
-        0%, 100% { opacity: 0.6; }
-        50% { opacity: 1; }
-      }
-    `;
-    if (!document.head.querySelector('style[data-quick-setup]')) {
-      style.setAttribute('data-quick-setup', 'true');
-      document.head.appendChild(style);
-    }
-  }, []);
 
   const [formData, setFormData] = useState({
     warehouseName: '',
@@ -44,6 +27,24 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
   const [errorMsg, setErrorMsg] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
+
+  // Add CSS animations on component mount
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
+    `;
+    if (!document.head.querySelector('style[data-quick-setup]')) {
+      style.setAttribute('data-quick-setup', 'true');
+      document.head.appendChild(style);
+    }
+  }, []);
 
   const vehicleTypes = [
     'Motorcycle / Scooter',
@@ -125,8 +126,6 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
       'vehicleType', 'contactNumber', 'licenseExpiry', 'shipmentItem',
       'quantity', 'shipment_date'
     ];
-    
-
 
     for (const field of requiredFields) {
       if (!formData[field] || formData[field].toString().trim() === '') {
@@ -179,6 +178,7 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
         submitData.append('user_id', user.id);
         submitData.append('username', user.username);
       }
+      // No endpoint field needed for RESTful API
 
       // Debug: Log FormData contents
       console.log('Submitting form data...');
@@ -189,10 +189,9 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
       // Send POST request - CRUCIAL: DO NOT set Content-Type header
       // Browser will automatically set multipart/form-data with boundary
       setProcessingStep('Creating warehouse...');
-      const response = await fetch('http://localhost/backend/logistics/quick_setup.php', {
+      const response = await fetch('http://localhost/backend/quick_setup', {
         method: 'POST',
         body: submitData
-        // NO headers property - let browser handle Content-Type
       });
 
       setProcessingStep('Processing response...');
@@ -202,6 +201,7 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
         // Show success message
         setProcessingStep('Setup completed!');
         setShowSuccess(true);
+        setErrorMsg('');
         
         // Reset form
         setFormData({
@@ -223,27 +223,33 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
         const fileInput = document.querySelector('input[type="file"]');
         if (fileInput) fileInput.value = '';
         
-        // Call success callback
+        // Call success callback to trigger parent re-fetch
         if (onSuccess) onSuccess();
         
         // Close modal after 2.5 seconds
         setTimeout(() => {
           setShowSuccess(false);
           setProcessingStep('');
+          setIsSubmitting(false);
           onClose();
         }, 2500);
       } else {
+        setIsSubmitting(false);
         console.error('Backend error:', data.message);
-        alert(`Error: ${data.message || 'Quick setup failed'}`);
+        setErrorMsg(data.message || 'Quick setup failed');
       }
     } catch (error) {
+      setIsSubmitting(false);
       console.error('Request failed:', error);
-      alert(`Request failed: ${error.message}`);
+      setErrorMsg(`Request failed: ${error.message}`);
     } finally {
       setIsSubmitting(false);
       setProcessingStep('');
     }
   };
+
+  // ✅ CONDITIONAL RENDERING MOVED TO RETURN STATEMENT
+  if (!isOpen) return null;
 
   return (
     <div className="wms-modal-overlay" onClick={onClose}>
@@ -334,35 +340,36 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
             : '0 8px 32px rgba(0,0,0,0.12)'
         }}
       >
-      {/* Responsive style for modal padding */}
-      <style>{`
-        @media (max-width: 600px) {
-          .setup-modal-content.wms-modal-content .setup-form-body {
-            padding: 16px !important;
+        {/* Responsive style for modal padding */}
+        <style>{`
+          @media (max-width: 600px) {
+            .setup-modal-content.wms-modal-content .setup-form-body {
+              padding: 16px !important;
+            }
           }
-        }
-      `}</style>
+        `}</style>
+
         {/* Close Button */}
         <button
           onClick={onClose}
           style={{
-            position:'absolute',
-            top:'15px',
-            right:'15px',
-            background:'#dc2626',
-            color:'#fff',
-            border:'none',
-            borderRadius:'50%',
-            width:'35px',
-            height:'35px',
-            fontSize:'1.3rem',
-            cursor:'pointer',
-            display:'flex',
-            alignItems:'center',
-            justifyContent:'center',
-            zIndex:10,
-            transition:'all 0.2s',
-            boxShadow:'0 2px 8px rgba(0,0,0,0.3)'
+            position: 'absolute',
+            top: '15px',
+            right: '15px',
+            background: '#dc2626',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '50%',
+            width: '35px',
+            height: '35px',
+            fontSize: '1.3rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10,
+            transition: 'all 0.2s',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
           }}
           onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -421,16 +428,18 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
             justifyContent: 'center',
             position: 'relative'
           }}>
-            <span style={{fontSize:'1.3em'}}>⚠️</span>
+            <span style={{ fontSize: '1.3em' }}>⚠️</span>
             <span>{errorMsg}</span>
-            <button type="button" onClick={()=>setErrorMsg('')} style={{position:'absolute',right:12,top:8,background:'none',border:'none',color:'#b91c1c',fontWeight:'bold',fontSize:'1.2em',cursor:'pointer'}}>×</button>
+            <button type="button" onClick={() => setErrorMsg('')} style={{ position: 'absolute', right: 12, top: 8, background: 'none', border: 'none', color: '#b91c1c', fontWeight: 'bold', fontSize: '1.2em', cursor: 'pointer' }}>×</button>
           </div>
         )}
-        <form onSubmit={handleSubmit} className="setup-form-body" style={{padding:'32px'}}>
+
+        <form onSubmit={handleSubmit} className="setup-form-body" style={{ padding: '32px' }}>
           {/* Warehouse Section */}
-          <div className="form-group" style={{marginBottom:'15px'}}>
-            <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Warehouse Name <span style={{color:'red'}}></span></label>
+          <div className="form-group" style={{ marginBottom: '15px' }}>
+            <label className="form-label" htmlFor="warehouseName" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>Warehouse Name <span style={{ color: 'red' }}>*</span></label>
             <input
+              id="warehouseName"
               className="wms-search-input"
               style={{
                 width: '100%',
@@ -443,7 +452,7 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
                 fontSize: '1em',
                 marginBottom: '10px',
                 boxSizing: 'border-box',
-                transition: 'border-color 0.2s',
+                transition: 'border-color 0.2s'
               }}
               onFocus={e => e.target.style.borderColor = '#F37021'}
               onBlur={e => e.target.style.borderColor = '#111'}
@@ -452,67 +461,70 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
               value={formData.warehouseName}
               onChange={handleInputChange}
               placeholder="Enter warehouse name"
-              style={{width:'100%',marginBottom:'10px'}}
               required
             />
           </div>
 
-          <div className="form-group" style={{marginBottom:'15px'}}>
-            <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Location <span style={{color:'red'}}></span></label>
+          <div className="form-group" style={{ marginBottom: '15px' }}>
+            <label className="form-label" htmlFor="location" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>Location <span style={{ color: 'red' }}>*</span></label>
             <input
+              id="location"
               className="wms-search-input"
               type="text"
               name="location"
               value={formData.location}
               onChange={handleInputChange}
               placeholder="Enter location"
-              style={{width:'100%',marginBottom:'10px'}}
+              style={{ width: '100%', marginBottom: '10px' }}
               required
             />
           </div>
 
           {/* Driver Section */}
-          <div className="form-group" style={{marginBottom:'15px'}}>
-            <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Driver Name <span style={{color:'red'}}></span></label>
+          <div className="form-group" style={{ marginBottom: '15px' }}>
+            <label className="form-label" htmlFor="driverName" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>Driver Name <span style={{ color: 'red' }}>*</span></label>
             <input
+              id="driverName"
               className="wms-search-input"
               type="text"
               name="driverName"
               value={formData.driverName}
               onChange={handleInputChange}
               placeholder="Enter driver name"
-              style={{width:'100%',marginBottom:'10px'}}
+              style={{ width: '100%', marginBottom: '10px' }}
               required
             />
           </div>
 
-          <div className="form-row" style={{display:'flex',gap:'15px',marginBottom:'15px'}}>
-            <div className="form-group" style={{flex:1}}>
-              <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>License Number <span style={{color:'red'}}></span></label>
+          <div className="form-row" style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label" htmlFor="licenseNumber" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>License Number <span style={{ color: 'red' }}>*</span></label>
               <input
+                id="licenseNumber"
                 className="wms-search-input"
                 type="text"
                 name="licenseNumber"
                 value={formData.licenseNumber}
                 onChange={handleInputChange}
                 placeholder="License number"
-                style={{width:'100%',marginBottom:'10px'}}
+                style={{ width: '100%', marginBottom: '10px' }}
                 inputMode="numeric"
                 pattern="[0-9]*"
                 required
               />
             </div>
 
-            <div className="form-group" style={{flex:1}}>
-              <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Vehicle Type <span style={{color:'red'}}></span></label>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label" htmlFor="vehicleType" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>Vehicle Type <span style={{ color: 'red' }}>*</span></label>
               <input
+                id="vehicleType"
                 className="wms-search-input"
                 name="vehicleType"
                 value={formData.vehicleType}
                 onChange={handleInputChange}
                 placeholder="Select or type vehicle type"
                 list="vehicle-types"
-                style={{width:'100%',marginBottom:'10px'}}
+                style={{ width: '100%', marginBottom: '10px' }}
                 required
               />
               <datalist id="vehicle-types">
@@ -523,17 +535,18 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
           </div>
 
-          <div className="form-row" style={{display:'flex',gap:'15px',marginBottom:'15px'}}>
-            <div className="form-group" style={{flex:1}}>
-              <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Contact Number <span style={{color:'red'}}></span></label>
+          <div className="form-row" style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label" htmlFor="contactNumber" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>Contact Number <span style={{ color: 'red' }}>*</span></label>
               <input
+                id="contactNumber"
                 className="wms-search-input"
                 type="tel"
                 name="contactNumber"
                 value={formData.contactNumber}
                 onChange={handleInputChange}
                 placeholder="09XX XXX XXXX"
-                style={{width:'100%',marginBottom:'10px'}}
+                style={{ width: '100%', marginBottom: '10px' }}
                 maxLength={11}
                 pattern="[0-9]{11}"
                 inputMode="numeric"
@@ -541,23 +554,23 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
               />
             </div>
 
-            <div className="form-group" style={{flex:1}}>
-              <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>License Expiry <span style={{color:'red'}}></span></label>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>License Expiry <span style={{ color: 'red' }}>*</span></label>
               <input
                 className="wms-search-input"
                 type="date"
                 name="licenseExpiry"
                 value={formData.licenseExpiry}
                 onChange={handleInputChange}
-                style={{width:'100%',marginBottom:'10px'}}
+                style={{ width: '100%', marginBottom: '10px' }}
                 required
               />
             </div>
           </div>
 
           {/* Shipment Section */}
-          <div className="form-group" style={{marginBottom:'15px'}}>
-            <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Shipment Item <span style={{color:'red'}}></span></label>
+          <div className="form-group" style={{ marginBottom: '15px' }}>
+            <label className="form-label" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>Shipment Item <span style={{ color: 'red' }}>*</span></label>
             <input
               className="wms-search-input"
               type="text"
@@ -565,21 +578,21 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
               value={formData.shipmentItem}
               onChange={handleInputChange}
               placeholder="Enter item name"
-              style={{width:'100%',marginBottom:'10px'}}
+              style={{ width: '100%', marginBottom: '10px' }}
               required
             />
           </div>
 
-          <div className="form-group" style={{marginBottom:'15px'}}>
-            <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Item Image</label>
-            <div style={{position:'relative',marginBottom:'10px'}}>
+          <div className="form-group" style={{ marginBottom: '15px' }}>
+            <label className="form-label" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>Item Image</label>
+            <div style={{ position: 'relative', marginBottom: '10px' }}>
               <input
                 type="file"
                 name="item_image"
                 accept="image/*"
                 onChange={handleFileChange}
                 id="item-image-input"
-                style={{display:'none'}}
+                style={{ display: 'none' }}
               />
               <label
                 htmlFor="item-image-input"
@@ -614,16 +627,16 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
                 <span>{formData.item_image ? 'Change Image' : 'Upload Image'}</span>
               </label>
               {formData.item_image && (
-                <div style={{marginTop:'10px',padding:'8px',background:'#1E2126',borderRadius:'4px',border:'1px solid #FFB800',color:'#FFB800',fontSize:'0.85rem',display:'flex',alignItems:'center',gap:'8px'}}>
-                  <MdImage style={{fontSize:'1.2rem'}} />
+                <div style={{ marginTop: '10px', padding: '8px', background: '#1E2126', borderRadius: '4px', border: '1px solid #FFB800', color: '#FFB800', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MdImage style={{ fontSize: '1.2rem' }} />
                   <span>{formData.item_image.name}</span>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="form-group" style={{marginBottom:'15px'}}>
-            <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Quantity <span style={{color:'red'}}></span></label>
+          <div className="form-group" style={{ marginBottom: '15px' }}>
+            <label className="form-label" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>Quantity <span style={{ color: 'red' }}>*</span></label>
             <input
               className="wms-search-input"
               type="number"
@@ -632,20 +645,20 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
               onChange={handleInputChange}
               placeholder="Enter quantity"
               min="1"
-              style={{width:'100%',marginBottom:'10px'}}
+              style={{ width: '100%', marginBottom: '10px' }}
               required
             />
           </div>
 
-          <div className="form-group" style={{marginBottom:'25px'}}>
-            <label className="form-label" style={{display:'block',fontWeight:600,marginBottom:'8px'}}>Date of Shipment <span style={{color:'red'}}></span></label>
+          <div className="form-group" style={{ marginBottom: '25px' }}>
+            <label className="form-label" style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>Date of Shipment <span style={{ color: 'red' }}>*</span></label>
             <input
               className="wms-search-input"
               type="date"
               name="shipment_date"
               value={formData.shipment_date}
               onChange={handleInputChange}
-              style={{width:'100%',marginBottom:'10px'}}
+              style={{ width: '100%', marginBottom: '10px' }}
               required
             />
           </div>
@@ -654,7 +667,21 @@ const QuickSetupModal = ({ isOpen, onClose, onSuccess }) => {
           <button
             type="submit"
             disabled={isSubmitting}
-            style={{width:'100%',padding:'15px',background: isSubmitting ? '#9ca3af' : '#F37021',color:'#fff',border:'none',borderRadius:4,fontWeight:'bold',fontSize:'1.1em',cursor: isSubmitting ? 'not-allowed' : 'pointer',letterSpacing:1,boxShadow: isSubmitting ? 'none' : '0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)',textTransform:'uppercase',transition:'all 0.2s'}}
+            style={{
+              width: '100%',
+              padding: '15px',
+              background: isSubmitting ? '#9ca3af' : '#F37021',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 4,
+              fontWeight: 'bold',
+              fontSize: '1.1em',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              letterSpacing: 1,
+              boxShadow: isSubmitting ? 'none' : '0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)',
+              textTransform: 'uppercase',
+              transition: 'all 0.2s'
+            }}
           >
             {isSubmitting ? 'PROCESSING...' : 'ACTIVATE SETUP'}
           </button>

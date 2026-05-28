@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import './Register.css';
-import { Link } from 'react-router-dom';
-import logo from '../assets/logo.png';
+import './Login.css';
+import { Link, useNavigate } from 'react-router-dom';
+import logo from '../../assets/logo.png';
 
-// ICONS
 const EyeOpen = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
 const EyeClosed = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
 
@@ -17,27 +16,16 @@ const styles = {
   label: { display: 'block', fontSize: '0.7rem', fontWeight: '600', color: '#d1d5db', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' },
   input: { width: '100%', padding: '0.6rem', background: '#121417', border: '2px solid #343A40', borderRadius: '4px', color: 'white', marginBottom: '0.8rem', outline: 'none', transition: 'border-color 0.3s ease, box-shadow 0.3s ease', fontSize: '0.9rem' },
   btn: { width: '100%', padding: '0.75rem', background: '#F37021', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: '700', cursor: 'pointer', marginTop: '0.7rem', boxShadow: '0 4px 0 #C85A1A, 0 6px 8px rgba(0,0,0,0.3)', textTransform: 'uppercase', letterSpacing: '1px', transition: 'all 0.2s', fontSize: '0.85rem' },
-  errorBox: { background: '#450a0a', border: '1px solid #991b1b', color: '#fca5a5', padding: '0.5rem', borderRadius: '4px', marginBottom: '0.7rem', fontSize: '0.7rem' },
-  success: { background: '#064e3b', color: '#34d399', padding: '0.5rem', borderRadius: '4px', marginBottom: '0.7rem', textAlign: 'center', fontSize: '0.8rem' }
+  error: { background: '#450a0a', border: '1px solid #991b1b', color: '#fca5a5', padding: '0.5rem', borderRadius: '4px', marginBottom: '0.7rem', fontSize: '0.7rem', textAlign: 'center' },
+  link: { color: '#F37021', textDecoration: 'none', fontWeight: '500', fontSize: '0.85rem' }
 };
 
-// --- VALIDATION LOGIC RE-ADDED ---
-function validatePassword(password) {
-  const errors = [];
-  if (password.length < 8) errors.push('At least 8 characters');
-  if (!/[A-Z]/.test(password)) errors.push('At least 1 uppercase letter');
-  if (!/[0-9]/.test(password)) errors.push('At least 1 number');
-  if (!/[^A-Za-z0-9]/.test(password)) errors.push('At least 1 symbol (@, #, !, etc.)');
-  return errors;
-}
-
-export default function Register() {
-  const [form, setForm] = useState({ username: '', email: '', password: '' });
+export default function Login() {
+  const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState([]); // List ng password requirements
-  const [apiError, setApiError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -55,32 +43,22 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrors([]); 
-    setApiError('');
-
-    // 1. Check Password Requirements
-    const passwordErrors = validatePassword(form.password);
-    if (passwordErrors.length > 0) {
-      setErrors(passwordErrors);
-      return; 
-    }
-
-    // 2. API CALL (Ito ang idadagdag/papalit sa luma mong logic)
     try {
-      const res = await fetch('http://localhost/backend/auth/register.php', {
+     const res = await fetch('http://localhost/backend/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', 
         body: JSON.stringify(form)
       });
       const data = await res.json();
-      
       if (data.success) {
-        setSuccess(true);
-      } else {
-        setApiError(data.message);
-      }
-    } catch (err) { 
-      setApiError('Server connection failed. Check if XAMPP is running.'); 
+        localStorage.setItem('user_id', data.user_id);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        navigate('/home');
+      } else setError(data.message);
+    } catch (err) {
+      console.error("Full Error:", err);
+      setError(err.message);
     }
   };
 
@@ -106,15 +84,15 @@ export default function Register() {
               0%, 100% { transform: translateY(0px) scale(1); }
               50% { transform: translateY(-10px) scale(1.05); }
             }
-            .register-input:focus { 
+            .login-input:focus { 
               border-color: #F37021 !important; 
               box-shadow: 0 0 0 3px rgba(243, 112, 33, 0.2) !important;
             }
-            .register-btn:hover {
+            .login-btn:hover {
               transform: translateY(2px);
               box-shadow: 0 2px 0 #C85A1A, 0 4px 6px rgba(0,0,0,0.3) !important;
             }
-            .register-btn:active {
+            .login-btn:active {
               transform: translateY(4px);
               box-shadow: 0 0 0 #C85A1A, 0 2px 4px rgba(0,0,0,0.3) !important;
             }
@@ -125,60 +103,41 @@ export default function Register() {
             <Link to="/" style={{ textDecoration: 'none', display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
               <img src={logo} alt="Warehouse LMS" style={logoStyle} />
             </Link>
-            <div style={styles.subtitle}>Create your manager account</div>
+            <div style={styles.subtitle}>Secure Portal Login</div>
 
-            {success ? (
-              <div style={{ textAlign: 'center' }}>
-                <div style={styles.success}>Registration Successful!</div>
-                <Link to="/login" style={{ color: '#F37021', textDecoration: 'none' }}>Proceed to Login →</Link>
+            <form onSubmit={handleSubmit} autoComplete="off" spellCheck={false}>
+              {error && <div style={styles.error}>{error}</div>}
+              
+              <label style={styles.label}>Email Address</label>
+              <input className="login-input" style={styles.input} type="email" autoComplete="username" name="login-email" onChange={(e) => setForm({...form, email: e.target.value})} required />
+
+              <label style={styles.label}>Password</label>
+              <div style={{ position: 'relative' }}>
+                <input 
+                  className="login-input"
+                  style={styles.input} 
+                  type={showPassword ? "text" : "password"} 
+                  autoComplete="current-password" 
+                  name="login-password"
+                  onChange={(e) => setForm({...form, password: e.target.value})} 
+                  required 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: '12px', top: '10px', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                >
+                  {/* LOGIC: Show Open Eye if Password is visible, Closed Eye if hidden */}
+                  {showPassword ? <EyeOpen /> : <EyeClosed />}
+                </button>
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} autoComplete="off" spellCheck={false}>
-                {/* API Errors */}
-                {apiError && <div style={styles.errorBox}>{apiError}</div>}
 
-                {/* PASSWORD REQUIREMENTS LIST */}
-                {errors.length > 0 && (
-                  <div style={styles.errorBox}>
-                    <strong>Security Requirements:</strong>
-                    <ul style={{ marginTop: '5px', paddingLeft: '1.2rem' }}>
-                      {errors.map((e, i) => <li key={i}>{e}</li>)}
-                    </ul>
-                  </div>
-                )}
-                
-                <label style={styles.label}>Username</label>
-                <input className="register-input" style={styles.input} type="text" autoComplete="new-username" name="register-username" onChange={(e) => setForm({...form, username: e.target.value})} required />
-
-                <label style={styles.label}>Email Address</label>
-                <input className="register-input" style={styles.input} type="email" autoComplete="new-email" name="register-email" onChange={(e) => setForm({...form, email: e.target.value})} required />
-
-                <label style={styles.label}>Password</label>
-                <div style={{ position: 'relative' }}>
-                  <input 
-                    className="register-input"
-                    style={styles.input} 
-                    type={showPassword ? "text" : "password"} 
-                    autoComplete="new-password" 
-                    name="register-password"
-                    onChange={(e) => setForm({...form, password: e.target.value})} 
-                    required 
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{ position: 'absolute', right: '12px', top: '10px', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
-                  >
-                    {showPassword ? <EyeOpen /> : <EyeClosed />}
-                  </button>
-                </div>
-
-                <button type="submit" className="register-btn" style={styles.btn}>Register Manager</button>
-                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: '#9ca3af' }}>
-                  Already a manager? <Link to="/login" style={{ color: '#F37021', textDecoration: 'none' }}>Login</Link>
-                </p>
-              </form>
-            )}
+              <button type="submit" className="login-btn" style={styles.btn}>Sign In to Dashboard</button>
+              
+              <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.85rem', color: '#9ca3af' }}>
+                New Manager? <Link to="/register" style={styles.link}>Register Here</Link>
+              </p>
+            </form>
           </div>
         </div>
       )}

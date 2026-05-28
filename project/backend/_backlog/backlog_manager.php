@@ -10,7 +10,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit;
 }
 
-require_once '../db.php';
+try {
+    require_once __DIR__ . '/../db.php';
+    if (!isset($pdo)) {
+        throw new Exception('Database connection variable ($pdo) is missing.');
+    }
+} catch (Exception $e) {
+    header('Content-Type: application/json');
+    http_response_code(500);
+    echo json_encode(["success" => false, "message" => "DB Include/Connection Error: " . $e->getMessage()]);
+    exit;
+}
 
 $action = $_GET['action'] ?? '';
 

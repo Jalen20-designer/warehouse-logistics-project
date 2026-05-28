@@ -1,4 +1,4 @@
-import '../pages/Home.css';
+import '../../pages/Home.css';
 import React from 'react';
 import { MdLocalShipping, MdList, MdDelete, MdVisibility } from 'react-icons/md';
 

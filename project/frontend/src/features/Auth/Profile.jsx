@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 import { MdArrowBack, MdCameraAlt } from 'react-icons/md';
+
+// Icons
+const EyeOpen = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+);
+const EyeClosed = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+);
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -31,28 +39,38 @@ const Profile = () => {
     }
   }, []);
 
+  // 1. FETCH PROFILE (REST GET)
   const fetchProfile = async (id) => {
     try {
-      const response = await fetch(`http://localhost/backend/auth/profile.php?id=${id}`);
+      // Siniguro ang credentials: 'include' para sa session
+      const response = await fetch(`http://localhost/backend/auth/profile?id=${id}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) throw new Error('Server error');
+
       const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.user) {
         const userData = {
-          username: data.data.username || '',
-          email: data.data.email || '',
-          created_at: data.data.created_at || '',
-          avatar: data.data.avatar || ''
+          username: data.user.username || '',
+          email: data.user.email || '',
+          created_at: data.user.created_at || '',
+          avatar: data.user.avatar || ''
         };
         setProfile(userData);
         setOriginalProfile(userData);
-        if (data.data.avatar) {
-          setAvatarPreview(`http://localhost/backend/uploads/profiles/${data.data.avatar}`);
+        if (userData.avatar) {
+          setAvatarPreview(`http://localhost/backend/uploads/profiles/${userData.avatar}`);
         }
       } else {
         setMessage({ type: 'error', text: data.message || 'Failed to load profile.' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Network error occurred while fetching profile.' });
+      console.error("Fetch Error:", error);
+      setMessage({ type: 'error', text: 'Connection failed' });
     } finally {
       setLoading(false);
     }
@@ -81,22 +99,26 @@ const Profile = () => {
     }
   };
 
+  // 2. UPDATE PROFILE (REST POST/PATCH)
   const handleUpdate = async (e) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
 
     const formData = new FormData();
-    formData.append('id', userId);
+    // INALIS ang 'action' property - hindi na kailangan sa REST
     formData.append('username', profile.username);
     if (avatarFile) {
       formData.append('avatar', avatarFile);
     }
 
     try {
-      const response = await fetch('http://localhost/backend/auth/profile.php', {
+      const response = await fetch('http://localhost/backend/auth/profile', {
         method: 'POST',
+        credentials: 'include', // Mahalaga para ma-recognize ng server ang user mo
         body: formData
       });
+
+      if (!response.ok) throw new Error('Update failed');
 
       const data = await response.json();
 
@@ -114,25 +136,28 @@ const Profile = () => {
           localStorage.setItem('user', JSON.stringify(newStoredUser));
         }
       } else {
-        setMessage({ type: 'error', text: data.message || 'Failed to update profile.' });
+        setMessage({ type: 'error', text: data.message || 'Update failed.' });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Network error occurred while updating profile.' });
+      console.error("Update error:", error);
+      setMessage({ type: 'error', text: 'Network error occurred.' });
     }
   };
-
-  if (loading) {
-    return <div style={{...styles.container, backgroundColor: isDark ? '#121417' : '#f9fafb'}}><p style={{color: isDark ? '#9CA3AF' : '#6b7280'}}>Loading profile...</p></div>;
-  }
 
   const formatDate = (dateString) => {
     if (!dateString) return '---';
     return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+      year: 'numeric', month: 'long', day: 'numeric'
     });
   };
+
+  if (loading) {
+    return (
+      <div style={{...styles.container, backgroundColor: isDark ? '#121417' : '#f9fafb'}}>
+        <p style={{color: isDark ? '#9CA3AF' : '#6b7280'}}>Loading profile...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{...styles.container, backgroundColor: isDark ? '#121417' : '#f9fafb', color: isDark ? '#FFFFFF' : '#1f2937'}}>
@@ -164,13 +189,7 @@ const Profile = () => {
                 </div>
               )}
             </div>
-            <input 
-              type="file" 
-              id="avatarUpload" 
-              accept="image/*" 
-              style={{ display: 'none' }} 
-              onChange={handleAvatarChange} 
-            />
+            <input type="file" id="avatarUpload" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
           </div>
         </div>
 
@@ -178,44 +197,32 @@ const Profile = () => {
           <div style={styles.inputGroup}>
             <label style={{...styles.label, color: isDark ? '#9CA3AF' : '#6b7280'}}>Username</label>
             {isEditing ? (
-              <input
-                type="text"
-                name="username"
-                value={profile.username}
-                onChange={handleChange}
-                style={{...styles.inputActive, backgroundColor: isDark ? '#121417' : '#f9fafb', color: isDark ? '#FFFFFF' : '#1f2937'}}
-                required
-              />
+              <input type="text" name="username" value={profile.username} onChange={handleChange} style={{...styles.inputActive, backgroundColor: isDark ? '#121417' : '#f9fafb', color: isDark ? '#FFFFFF' : '#1f2937'}} required />
             ) : (
-              <div style={{...styles.fixedText, borderBottomColor: isDark ? '#343A40' : '#e5e7eb', color: isDark ? '#FFFFFF' : '#1f2937'}}>{profile.username || 'Not set'}</div>
+              <div style={{...styles.fixedText, borderBottomColor: isDark ? '#343A40' : '#e5e7eb'}}>{profile.username || 'Not set'}</div>
             )}
           </div>
 
           <div style={styles.inputGroup}>
             <label style={{...styles.label, color: isDark ? '#9CA3AF' : '#6b7280'}}>Email Address</label>
-            <div style={{...styles.fixedText, borderBottomColor: isDark ? '#343A40' : '#e5e7eb', color: isDark ? '#FFFFFF' : '#1f2937'}}>{profile.email || 'Not set'}</div>
+            <div style={{...styles.fixedText, borderBottomColor: isDark ? '#343A40' : '#e5e7eb'}}>{profile.email || 'Not set'}</div>
           </div>
 
           <div style={styles.inputGroup}>
             <label style={{...styles.label, color: isDark ? '#9CA3AF' : '#6b7280'}}>Member Since</label>
-            <div style={{...styles.fixedText, borderBottomColor: isDark ? '#343A40' : '#e5e7eb', color: isDark ? '#FFFFFF' : '#1f2937'}}>{formatDate(profile.created_at)}</div>
+            <div style={{...styles.fixedText, borderBottomColor: isDark ? '#343A40' : '#e5e7eb'}}>{formatDate(profile.created_at)}</div>
           </div>
 
           <div style={styles.buttonGroup}>
             {isEditing ? (
               <>
-                <button type="button" onClick={handleEditToggle} style={{...styles.cancelButton, borderColor: isDark ? '#343A40' : '#d1d5db', color: isDark ? '#FFFFFF' : '#1f2937'}}>
-                  Cancel
-                </button>
-                <button type="submit" style={styles.saveButton}>
-                  Save Changes
-                </button>
+                <button type="button" onClick={handleEditToggle} style={{...styles.cancelButton, borderColor: isDark ? '#343A40' : '#d1d5db', color: isDark ? '#FFFFFF' : '#1f2937'}}>Cancel</button>
+                <button type="submit" style={styles.saveButton}>Save Changes</button>
               </>
             ) : (
-              <button type="button" onClick={handleEditToggle} style={styles.editButton}>
-                Edit Profile
-              </button>
-            )}</div>
+              <button type="button" onClick={handleEditToggle} style={styles.editButton}>Edit Profile</button>
+            )}
+          </div>
         </form>
       </div>
     </div>
@@ -223,55 +230,24 @@ const Profile = () => {
 };
 
 const styles = {
-  container: {
-    minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontFamily: 'Roboto Condensed, sans-serif', padding: '20px'
-  },
-  card: {
-    borderRadius: '4px', padding: '40px', width: '100%', maxWidth: '450px',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', border: '2px solid', position: 'relative'
-  },
+  container: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Roboto Condensed, sans-serif', padding: '20px' },
+  card: { borderRadius: '4px', padding: '40px', width: '100%', maxWidth: '450px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', border: '2px solid', position: 'relative' },
   header: { marginBottom: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' },
-  backButton: {
-    background: 'none', border: 'none', cursor: 'pointer', padding: '8px',
-    transition: 'transform 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start'
-  },
+  backButton: { background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignSelf: 'flex-start' },
   title: { margin: '0', fontSize: '2rem', fontWeight: 'bold', color: '#F37021', textTransform: 'uppercase', letterSpacing: '2px', textAlign: 'center' },
   avatarContainer: { display: 'flex', justifyContent: 'center', marginBottom: '30px' },
   avatarInner: { position: 'relative', width: '130px', height: '130px' },
-  avatar: {
-    width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#F37021',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '56px', fontWeight: 'bold', color: '#fff', border: '4px solid #F37021', boxShadow: '0 4px 12px rgba(243, 112, 33, 0.4)'
-  },
-  avatarOverlay: {
-    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: '50%',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: 0.8,
-    transition: 'opacity 0.2s', zIndex: 10
-  },
+  avatar: { width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#F37021', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '56px', fontWeight: 'bold', color: '#fff', border: '4px solid #F37021' },
+  avatarOverlay: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 },
   form: { display: 'flex', flexDirection: 'column', gap: '20px' },
   inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  label: { fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  fixedText: {
-    padding: '0.75rem', backgroundColor: 'transparent', borderBottom: '1px solid',
-    fontSize: '1rem', fontWeight: '400'
-  },
-  inputActive: {
-    padding: '0.75rem', border: '2px solid #F37021',
-    borderRadius: '4px', fontSize: '1rem', outline: 'none'
-  },
+  label: { fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' },
+  fixedText: { padding: '0.75rem', borderBottom: '1px solid', fontSize: '1rem' },
+  inputActive: { padding: '0.75rem', border: '2px solid #F37021', borderRadius: '4px', fontSize: '1rem', outline: 'none' },
   buttonGroup: { display: 'flex', gap: '15px', marginTop: '10px' },
-  editButton: {
-    flex: 1, padding: '0.9rem', backgroundColor: '#F37021', color: '#FFFFFF', border: 'none',
-    borderRadius: '4px', fontWeight: '700', cursor: 'pointer', textTransform: 'uppercase'
-  },
-  saveButton: {
-    flex: 2, padding: '0.9rem', backgroundColor: '#F37021', color: '#FFFFFF', border: 'none',
-    borderRadius: '4px', fontWeight: '700', cursor: 'pointer', textTransform: 'uppercase'
-  },
-  cancelButton: {
-    flex: 1, padding: '0.9rem', backgroundColor: 'transparent',
-    border: '2px solid', borderRadius: '4px', fontWeight: '700', cursor: 'pointer', textTransform: 'uppercase'
-  },
+  editButton: { flex: 1, padding: '0.9rem', backgroundColor: '#F37021', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontWeight: '700', cursor: 'pointer' },
+  saveButton: { flex: 2, padding: '0.9rem', backgroundColor: '#F37021', color: '#FFFFFF', border: 'none', borderRadius: '4px', fontWeight: '700', cursor: 'pointer' },
+  cancelButton: { flex: 1, padding: '0.9rem', backgroundColor: 'transparent', border: '2px solid', borderRadius: '4px', fontWeight: '700', cursor: 'pointer' },
   successMessage: { backgroundColor: '#064e3b', color: '#34d399', padding: '12px', borderRadius: '4px', marginBottom: '20px', textAlign: 'center' },
   errorMessage: { backgroundColor: '#450a0a', color: '#fca5a5', padding: '12px', borderRadius: '4px', marginBottom: '20px', textAlign: 'center' }
 };

@@ -1,17 +1,18 @@
 <?php
 // backend/logistics/logistics_manager.php
 header("Access-Control-Allow-Origin: http://localhost:3000");
+header('Access-Control-Allow-Credentials: true');
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json");
 
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') { exit; }
 
-require_once '../db.php';
+//require_once '../db.php';
 // --- DINAGDAG NA ENCRYPTION HELPER 
-require_once '../encryption_helper.php';
+//require_once '../encryption_helper.php';
 
-$action = $_GET['action'] ?? '';
+$action = $action ?? $_GET['action'] ?? '';
 
 try {
     // --- 1. LIST ACTIONS (GET) 
@@ -85,19 +86,27 @@ try {
     }
 
     elseif ($action === 'update_shipment_status') {
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (!$input || !isset($input['id'])) {
+        // Kunin ang ID mula sa Router ($id) o sa global input data ($input['id'])
+        $shipmentId = $input['id'] ?? $id ?? null;
+        $status = $input['status'] ?? 'Pending';
+
+        if (!$shipmentId) {
             echo json_encode(["success" => false, "message" => "No ID provided"]);
             exit;
         }
+
         $stmt = $pdo->prepare("UPDATE shipments SET status = ? WHERE id = ?");
-        $stmt->execute([$input['status'] ?? 'Pending', $input['id']]);
+        $stmt->execute([$status, $shipmentId]);
         echo json_encode(["success" => true, "message" => "Shipment status updated"]);
     }
-
     elseif ($action === 'update_driver_info') {
-        $input = json_decode(file_get_contents('php://input'), true);
-        if (!$input || !isset($input['id'])) {
+        // TANGGALIN o i-comment ang json_decode dito para hindi ma-overwrite ang ID mula sa Router:
+        // $input = json_decode(file_get_contents('php://input'), true);
+        
+        // Kunin ang ID mula sa Router ($id) o sa global input data ($input['id'])
+        $driverId = $input['id'] ?? $id ?? null;
+
+        if (!$driverId) {
             echo json_encode(["success" => false, "message" => "No ID provided"]);
             exit;
         }
@@ -105,10 +114,10 @@ try {
         // --- ENCRYPTION DIN DITO PARA SA UPDATE ---
         $stmt = $pdo->prepare("UPDATE drivers SET contact_no = ?, vehicle_type = ?, license_expiry = ? WHERE id = ?");
         $stmt->execute([
-            encryptField($input['contact_no']), 
-            $input['vehicle_type'], 
-            $input['license_expiry'], 
-            $input['id']
+            encryptField($input['contact_no'] ?? ''), 
+            $input['vehicle_type'] ?? '', 
+            $input['license_expiry'] ?? null, 
+            $driverId // <-- Gagamitin natin itong may fallback para siguradong may ID!
         ]);
         echo json_encode(["success" => true, "message" => "Driver info updated (Encrypted)"]);
     }

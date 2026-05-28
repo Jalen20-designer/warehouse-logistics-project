@@ -26,12 +26,20 @@ export default function DriverView({ filteredDataList, setSelectedItem, setIsDet
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <MdPhone style={{ fontSize: '1.2em', color: '#9ca3af' }} /> 
                   <span style={{ color: '#9ca3af' }}>Contact:</span> 
-                  {item.contact_no ? <span style={{ color: '#e5e7eb', fontWeight: '600' }}>{item.contact_no}</span> : <span style={{ color: '#ef4444', fontStyle: 'italic' }}>Pending</span>}
+                  {item.contact_no ? (
+                    <span style={{ color: '#e5e7eb', fontWeight: '600' }}>{item.contact_no}</span>
+                  ) : (
+                    <span style={{ color: '#ef4444', fontStyle: 'italic' }}>Pending</span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <MdCreditCard style={{ fontSize: '1.2em', color: '#9ca3af' }} /> 
                   <span style={{ color: '#9ca3af' }}>Expiry:</span> 
-                  {item.license_expiry ? <span style={{ color: '#e5e7eb', fontWeight: '600' }}>{item.license_expiry}</span> : <span style={{ color: '#ef4444', fontStyle: 'italic' }}>Pending</span>}
+                  {item.license_expiry ? (
+                    <span style={{ color: '#e5e7eb', fontWeight: '600' }}>{item.license_expiry}</span>
+                  ) : (
+                    <span style={{ color: '#ef4444', fontStyle: 'italic' }}>Pending</span>
+                  )}
                 </div>
               </div>
             </div>
